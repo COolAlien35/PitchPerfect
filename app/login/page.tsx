@@ -1,5 +1,7 @@
 "use client"
 
+import { auth, provider, signInWithPopup } from "../../src/firebase";
+
 import type React from "react"
 
 import { useState } from "react"
@@ -23,6 +25,24 @@ export default function LoginPage() {
     // Simulate login
     router.push("/dashboard")
   }
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      // Send this idToken to your backend:
+      const res = await fetch("/api/users/google-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken })
+      });
+      const data = await res.json();
+      // Store JWT in localStorage/cookies and call onLoginSuccess(data.token), etc.
+      router.push("/dashboard");
+    } catch (err) {
+      alert("Google Sign-In failed: " + err.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center py-12 px-4">
@@ -111,7 +131,7 @@ export default function LoginPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleGoogleLogin}>
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
