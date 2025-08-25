@@ -1,6 +1,6 @@
 "use client"
 
-import { auth, provider, signInWithPopup } from "../../src/firebase";
+import { auth, provider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "../../src/firebase";
 
 import type React from "react"
 
@@ -18,24 +18,41 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isSignUp, setIsSignUp] = useState(false)
   const router = useRouter()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulate login
-    router.push("/dashboard")
+    try {
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        router.push("/onboarding");
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      alert("Authentication failed: " + err.message);
+    }
   }
 
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
-      // Send this idToken to your backend:
+      const uid = result.user.uid; // Get Firebase User UID
+      // Send this idToken and uid to your backend:
       const res = await fetch("/api/users/google-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken })
+        body: JSON.stringify({ idToken, uid })
       });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Google Sign-In failed');
+      }
+
       const data = await res.json();
       // Store JWT in localStorage/cookies and call onLoginSuccess(data.token), etc.
       router.push("/dashboard");
@@ -57,17 +74,17 @@ export default function LoginPage() {
               InterviewAce AI
             </span>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to continue your interview journey</p>
+          <h1 className="text-2xl font-bold mb-2">{isSignUp ? "Create an Account" : "Welcome Back"}</h1>
+          <p className="text-gray-600">{isSignUp ? "Sign up to start your interview journey" : "Sign in to continue your interview journey"}</p>
         </div>
 
         <Card className="border-2">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
-            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
+            <CardTitle className="text-2xl text-center">{isSignUp ? "Sign Up" : "Sign In"}</CardTitle>
+            <CardDescription className="text-center">Enter your credentials to {isSignUp ? "create an account" : "access your account"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -105,19 +122,21 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="remember" className="rounded" />
-                  <Label htmlFor="remember" className="text-sm">
-                    Remember me
-                  </Label>
+              {!isSignUp && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="remember" className="rounded" />
+                    <Label htmlFor="remember" className="text-sm">
+                      Remember me
+                    </Label>
+                  </div>
+                  <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                    Forgot password?
+                  </Link>
                 </div>
-                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              )}
               <Button type="submit" className="w-full">
-                Sign In
+                {isSignUp ? "Sign Up" : "Sign In"}
               </Button>
             </form>
 
@@ -165,10 +184,10 @@ export default function LoginPage() {
             </div>
 
             <div className="text-center text-sm">
-              Don't have an account?{" "}
-              <Link href="/onboarding" className="text-blue-600 hover:underline font-medium">
-                Sign up
-              </Link>
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+              <button onClick={() => setIsSignUp(!isSignUp)} className="text-blue-600 hover:underline font-medium">
+                {isSignUp ? "Sign In" : "Sign up"}
+              </button>
             </div>
           </CardContent>
         </Card>

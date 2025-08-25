@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { Upload, ArrowRight, ArrowLeft, Brain } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { auth, db } from "@/src/firebase"
+import { doc, setDoc } from "firebase/firestore"
+import { onAuthStateChanged } from "firebase/auth"
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1)
@@ -19,20 +22,53 @@ export default function OnboardingPage() {
     experience: "",
     targetRole: "",
     industry: "",
-    goals: [],
+    goals: [] as string[],
     resume: null as File | null,
   })
+  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   const totalSteps = 4
   const progress = (step / totalSteps) * 100
 
-  const handleNext = () => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid)
+        setFormData((prev) => ({ ...prev, email: user.email || "" })) // Pre-fill email if available from auth
+      } else {
+        router.push("/login") // Redirect to login if not authenticated
+      }
+    })
+    return () => unsubscribe()
+  }, [router])
+
+  const handleNext = async () => {
     if (step < totalSteps) {
       setStep(step + 1)
     } else {
-      // Complete onboarding
-      router.push("/dashboard")
+      // Complete onboarding - Save data to Firestore
+      if (userId) {
+        try {
+          const userDocRef = doc(db, "users", userId);
+          await setDoc(userDocRef, {
+            name: formData.name,
+            email: formData.email,
+            experience: formData.experience,
+            targetRole: formData.targetRole,
+            industry: formData.industry,
+            goals: formData.goals,
+            // resume will be handled later
+          }, { merge: true }); // Use merge: true to update existing fields or create if not exists
+          router.push("/dashboard");
+        } catch (error) {
+          console.error("Error saving onboarding data:", error);
+          alert("Failed to save onboarding data. Please try again.");
+        }
+      } else {
+        alert("User not authenticated. Please log in again.");
+        router.push("/login");
+      }
     }
   }
 
@@ -112,6 +148,7 @@ export default function OnboardingPage() {
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                    disabled // Email is pre-filled from auth
                   />
                 </div>
               </>

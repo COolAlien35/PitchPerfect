@@ -20,10 +20,24 @@ import {
   Flame,
   Shield,
   Sparkles,
+  LogOut,
+  User,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { auth } from "@/src/firebase"
+import { signOut } from "firebase/auth"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import "./dashboard.css"
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [userStats] = useState({
     totalSessions: 12,
     averageScore: 7.8,
@@ -48,6 +62,20 @@ export default function DashboardPage() {
     { name: "Communication Master", icon: "🗣️", earned: false },
   ]
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      router.push("/login")
+    } catch (error) {
+      console.error("Error logging out:", error)
+      alert("Failed to log out. Please try again.")
+    }
+  }
+
+  const handleProfile = () => {
+    router.push("/profile")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
@@ -70,9 +98,26 @@ export default function DashboardPage() {
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </Button>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-blue-600">JD</span>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600">JD</span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem className="cursor-pointer" onClick={handleProfile}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
         </div>
       </header>

@@ -57,12 +57,208 @@ import {
 export default function InterviewAnalysisPage() {
   const [sessionData, setSessionData] = useState<any>(null)
   const [overallScore, setOverallScore] = useState(8.2)
+  const [calculatedScores, setCalculatedScores] = useState<any>(null)
+
+  // Calculate scores based on real data
+  const calculateScores = (data: any) => {
+    if (!data) return null
+
+    const scores: any = {
+      communication: 75,
+      confidence: 70,
+      clarity: 75,
+      engagement: 70,
+      storytelling: 75,
+      professionalism: 75,
+      technicalKnowledge: 70,
+      problemSolving: 75,
+      leadership: 70,
+      adaptability: 75,
+    }
+
+    // Analyze voice data
+    if (data.voiceAnalysisHistory && data.voiceAnalysisHistory.length > 0) {
+      const voiceData = data.voiceAnalysisHistory
+      const avgWPM = voiceData.reduce((sum: number, item: any) => sum + (item.wpm || 0), 0) / voiceData.length
+      const avgVolume = voiceData.reduce((sum: number, item: any) => sum + (item.volume || 0), 0) / voiceData.length
+      const fillerWords = voiceData.reduce((sum: number, item: any) => sum + (item.fillerWords || 0), 0)
+
+      // Adjust scores based on voice metrics
+      if (avgWPM >= 140 && avgWPM <= 160) scores.communication += 10
+      else if (avgWPM < 120 || avgWPM > 180) scores.communication -= 5
+
+      if (avgVolume >= 60) scores.confidence += 8
+      else if (avgVolume < 30) scores.confidence -= 10
+
+      if (fillerWords < 5) scores.clarity += 10
+      else if (fillerWords > 10) scores.clarity -= 8
+
+      // Analyze confidence from voice data
+      const highConfidenceCount = voiceData.filter((item: any) => item.confidence === "High").length
+      const confidenceRatio = highConfidenceCount / voiceData.length
+      scores.confidence += Math.round(confidenceRatio * 15)
+    }
+
+    // Analyze emotion data
+    if (data.emotionHistory && data.emotionHistory.length > 0) {
+      const emotionData = data.emotionHistory
+      const avgHappy = emotionData.reduce((sum: number, item: any) => sum + (item.happy || 0), 0) / emotionData.length
+      const avgNeutral = emotionData.reduce((sum: number, item: any) => sum + (item.neutral || 0), 0) / emotionData.length
+
+      if (avgHappy > 0.3) scores.engagement += 10
+      if (avgNeutral > 0.4) scores.professionalism += 8
+    }
+
+    // Analyze responses
+    if (data.responses && data.responses.length > 0) {
+      const responses = data.responses.filter((r: string) => r && r.length > 0)
+      const avgResponseLength = responses.reduce((sum: number, r: string) => sum + r.length, 0) / responses.length
+
+      // Score based on response quality
+      responses.forEach((response: string, index: number) => {
+        const wordCount = response.split(' ').length
+        const hasSTAR = response.toLowerCase().includes('situation') || 
+                       response.toLowerCase().includes('task') || 
+                       response.toLowerCase().includes('action') || 
+                       response.toLowerCase().includes('result')
+        
+        if (wordCount >= 50 && wordCount <= 200) scores.storytelling += 5
+        if (hasSTAR) scores.storytelling += 10
+        
+        if (wordCount >= 30) scores.communication += 3
+        if (response.includes('led') || response.includes('managed') || response.includes('coordinated')) {
+          scores.leadership += 5
+        }
+        if (response.includes('problem') || response.includes('solve') || response.includes('challenge')) {
+          scores.problemSolving += 5
+        }
+      })
+    }
+
+    // Analyze session metrics
+    if (data.sessionTime) {
+      const timePerQuestion = data.sessionTime / (data.questions?.length || 1)
+      if (timePerQuestion >= 120 && timePerQuestion <= 300) scores.engagement += 5
+    }
+
+    if (data.interruptionsHandled) {
+      if (data.interruptionsHandled <= 2) scores.adaptability += 10
+      else if (data.interruptionsHandled > 5) scores.adaptability -= 5
+    }
+
+    // Cap all scores at 100
+    Object.keys(scores).forEach(key => {
+      scores[key] = Math.min(100, Math.max(0, scores[key]))
+    })
+
+    return scores
+  }
+
+  // Calculate overall score
+  const calculateOverallScore = (scores: any) => {
+    if (!scores) return 8.2
+    const total = Object.values(scores).reduce((sum: number, score: any) => sum + (score as number), 0)
+    const average = total / Object.keys(scores).length
+    return Math.round((average / 10) * 10) / 10
+  }
+
+  // Generate AI analysis based on real responses
+  const generateAIAnalysis = (question: string, userAnswer: string) => {
+    if (!userAnswer || userAnswer.length < 10) {
+      return {
+        score: 5.0,
+        analysis: "No response detected. Please ensure your microphone is working and try speaking clearly.",
+        improvements: ["Speak clearly and at a good pace", "Ensure your microphone is properly connected", "Try to provide detailed responses"]
+      }
+    }
+
+    const wordCount = userAnswer.split(' ').length
+    const hasSTAR = userAnswer.toLowerCase().includes('situation') || 
+                   userAnswer.toLowerCase().includes('task') || 
+                   userAnswer.toLowerCase().includes('action') || 
+                   userAnswer.toLowerCase().includes('result')
+    const hasMetrics = /\d+%|\d+ percent|\$\d+|\d+ dollars|\d+ people|\d+ team/.test(userAnswer)
+    const hasLeadership = /led|managed|coordinated|supervised|directed/.test(userAnswer.toLowerCase())
+
+    let score = 6.0
+    let analysis = ""
+    let improvements = []
+
+    // Score based on response characteristics
+    if (wordCount >= 50 && wordCount <= 200) score += 1.5
+    else if (wordCount < 30) {
+      score -= 1.0
+      improvements.push("Provide more detailed responses")
+    }
+    else if (wordCount > 300) {
+      score -= 0.5
+      improvements.push("Be more concise in your responses")
+    }
+
+    if (hasSTAR) {
+      score += 1.5
+      analysis += "Good use of STAR method structure. "
+    } else {
+      score -= 1.0
+      improvements.push("Use the STAR method (Situation, Task, Action, Result)")
+    }
+
+    if (hasMetrics) {
+      score += 1.0
+      analysis += "Excellent use of quantifiable metrics. "
+    } else {
+      score -= 0.5
+      improvements.push("Include specific numbers and metrics")
+    }
+
+    if (hasLeadership) {
+      score += 0.5
+      analysis += "Good demonstration of leadership. "
+    }
+
+    // Generate contextual analysis
+    if (question.toLowerCase().includes('difficult') || question.toLowerCase().includes('challenge')) {
+      if (userAnswer.toLowerCase().includes('problem') || userAnswer.toLowerCase().includes('solve')) {
+        score += 0.5
+        analysis += "Good problem-solving approach. "
+      }
+    }
+
+    if (question.toLowerCase().includes('deadline') || question.toLowerCase().includes('pressure')) {
+      if (userAnswer.toLowerCase().includes('prioritize') || userAnswer.toLowerCase().includes('organize')) {
+        score += 0.5
+        analysis += "Good time management demonstration. "
+      }
+    }
+
+    // Cap score at 10
+    score = Math.min(10, Math.max(0, score))
+
+    if (!analysis) {
+      analysis = "Your response shows good structure but could be enhanced with more specific details and metrics."
+    }
+
+    return {
+      score: Math.round(score * 10) / 10,
+      analysis,
+      improvements
+    }
+  }
 
   useEffect(() => {
     // Load session data from localStorage or API
     const storedSession = localStorage.getItem("lastInterviewSession")
     if (storedSession) {
-      setSessionData(JSON.parse(storedSession))
+      const data = JSON.parse(storedSession)
+      setSessionData(data)
+      
+      // Calculate scores based on real data
+      const scores = calculateScores(data)
+      setCalculatedScores(scores)
+      
+      // Calculate overall score
+      const overall = calculateOverallScore(scores)
+      setOverallScore(overall)
     } else {
       // Fallback mock data
       setSessionData({
@@ -87,7 +283,27 @@ export default function InterviewAnalysisPage() {
     }
   }, [])
 
-  const detailedScores = {
+  // Helper function to get ideal answers
+  const getIdealAnswer = (question: string) => {
+    const idealAnswers: { [key: string]: string } = {
+      "Tell me about your greatest professional achievement and how you overcame the challenges.": 
+        "A strong answer should follow the STAR method (Situation, Task, Action, Result). Start with a specific situation, explain your role and the challenges, detail the actions you took, and quantify the results. Focus on leadership, problem-solving, and measurable outcomes.",
+      "Describe a time when you had to work under extreme pressure. How did you handle it?":
+        "Demonstrate your ability to stay calm, prioritize tasks, and make quick decisions. Show how you managed stress, communicated with stakeholders, and maintained quality under pressure. Include the outcome and what you learned.",
+      "What would you do if you discovered a major flaw in a project just before the deadline?":
+        "Show your ethical standards, communication skills, and problem-solving approach. Explain how you'd assess the situation, communicate with stakeholders transparently, and propose solutions. Demonstrate accountability and forward-thinking.",
+      "Tell me about a time when you had to adapt to a significant change at work?":
+        "Show your flexibility and resilience. Describe the change, your initial reaction, how you adapted your approach, and the positive outcomes. Emphasize learning and growth.",
+      "Tell me about a project you're particularly proud of. What made it successful?":
+        "Choose a project that demonstrates your key strengths. Explain the context, your role, the challenges, your contributions, and quantifiable results. Show passion and ownership.",
+      "Describe a time when you had to give constructive feedback to a colleague.":
+        "Show your communication skills and emotional intelligence. Explain the situation, your approach to delivering feedback, how you ensured it was constructive, and the positive outcome."
+    }
+    
+    return idealAnswers[question] || "Provide a detailed response using the STAR method with specific examples and quantifiable results."
+  }
+
+  const detailedScores = calculatedScores || {
     communication: 88,
     confidence: 82,
     clarity: 85,
@@ -100,50 +316,22 @@ export default function InterviewAnalysisPage() {
     adaptability: 87,
   }
 
-  const correctAnswers = [
-    {
-      question: "Tell me about your greatest professional achievement and how you overcame the challenges.",
-      userAnswer: sessionData?.responses[0] || "",
-      correctAnswer:
-        "A strong answer should follow the STAR method (Situation, Task, Action, Result). Start with a specific situation, explain your role and the challenges, detail the actions you took, and quantify the results. Focus on leadership, problem-solving, and measurable outcomes.",
-      aiAnalysis:
-        "Your answer shows good structure but lacks specific metrics. Consider adding quantifiable results like 'reduced timeline by 30%' or 'saved $50K in costs'.",
-      improvementAreas: [
-        "Add specific metrics and numbers",
-        "Elaborate on leadership decisions",
-        "Mention lessons learned",
-      ],
-      score: 7.5,
-    },
-    {
-      question: "Describe a time when you had to work under extreme pressure. How did you handle it?",
-      userAnswer: sessionData?.responses[1] || "",
-      correctAnswer:
-        "Demonstrate your ability to stay calm, prioritize tasks, and make quick decisions. Show how you managed stress, communicated with stakeholders, and maintained quality under pressure. Include the outcome and what you learned.",
-      aiAnalysis:
-        "Good example of crisis management. Your response shows quick thinking and coordination skills. Consider adding more about how you managed your own stress and team morale.",
-      improvementAreas: [
-        "Discuss stress management techniques",
-        "Mention team motivation strategies",
-        "Add follow-up actions taken",
-      ],
-      score: 8.2,
-    },
-    {
-      question: "What would you do if you discovered a major flaw in a project just before the deadline?",
-      userAnswer: sessionData?.responses[2] || "",
-      correctAnswer:
-        "Show your ethical standards, communication skills, and problem-solving approach. Explain how you'd assess the situation, communicate with stakeholders transparently, and propose solutions. Demonstrate accountability and forward-thinking.",
-      aiAnalysis:
-        "Your answer demonstrates good judgment and communication. Strengthen it by discussing how you'd prevent similar issues in the future and your approach to stakeholder management.",
-      improvementAreas: [
-        "Add prevention strategies",
-        "Discuss stakeholder communication plan",
-        "Mention quality assurance improvements",
-      ],
-      score: 8.0,
-    },
-  ]
+  const correctAnswers = sessionData?.questions?.map((question: string, index: number) => {
+    const userAnswer = sessionData?.responses?.[index] || ""
+    const analysis = generateAIAnalysis(question, userAnswer)
+    
+    // Use ideal answers from session data if available, otherwise fall back to generated ones
+    const idealAnswer = sessionData?.ideal_answers?.[index] || getIdealAnswer(question)
+    
+    return {
+      question,
+      userAnswer,
+      correctAnswer: idealAnswer,
+      aiAnalysis: analysis.analysis,
+      improvementAreas: analysis.improvements,
+      score: analysis.score,
+    }
+  }) || []
 
   const improvementPlan = {
     immediate: [
@@ -245,7 +433,15 @@ export default function InterviewAnalysisPage() {
     ],
   }
 
-  const performanceData = [
+  const performanceData = sessionData?.questions?.map((question: string, index: number) => {
+    const userAnswer = sessionData?.responses?.[index] || ""
+    const analysis = generateAIAnalysis(question, userAnswer)
+    return {
+      question: `Q${index + 1}`,
+      score: analysis.score,
+      ideal: 9.0,
+    }
+  }) || [
     { question: "Q1", score: 7.5, ideal: 9.0 },
     { question: "Q2", score: 8.2, ideal: 9.0 },
     { question: "Q3", score: 8.0, ideal: 9.0 },
@@ -253,7 +449,14 @@ export default function InterviewAnalysisPage() {
     { question: "Q5", score: 8.5, ideal: 9.0 },
   ]
 
-  const skillsRadarData = [
+  const skillsRadarData = calculatedScores ? [
+    { skill: "Communication", score: calculatedScores.communication, fullMark: 100 },
+    { skill: "Leadership", score: calculatedScores.leadership, fullMark: 100 },
+    { skill: "Problem Solving", score: calculatedScores.problemSolving, fullMark: 100 },
+    { skill: "Technical", score: calculatedScores.technicalKnowledge, fullMark: 100 },
+    { skill: "Adaptability", score: calculatedScores.adaptability, fullMark: 100 },
+    { skill: "Storytelling", score: calculatedScores.storytelling, fullMark: 100 },
+  ] : [
     { skill: "Communication", score: 88, fullMark: 100 },
     { skill: "Leadership", score: 80, fullMark: 100 },
     { skill: "Problem Solving", score: 83, fullMark: 100 },
@@ -270,13 +473,23 @@ export default function InterviewAnalysisPage() {
     { session: "Current", score: 8.2 },
   ]
 
-  const timeAllocationData = [
-    { name: "Question 1", time: 180, color: "#8884d8" },
-    { name: "Question 2", time: 220, color: "#82ca9d" },
-    { name: "Question 3", time: 160, color: "#ffc658" },
-    { name: "Question 4", time: 200, color: "#ff7300" },
-    { name: "Question 5", time: 240, color: "#00ff88" },
-  ]
+  const timeAllocationData = sessionData?.questionStartTimes ? 
+    sessionData.questionStartTimes.map((startTime: number, index: number) => {
+      const nextStartTime = sessionData.questionStartTimes[index + 1] || Date.now()
+      const timeSpent = Math.round((nextStartTime - startTime) / 1000) // Convert to seconds
+      const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00ff88"]
+      return {
+        name: `Question ${index + 1}`,
+        time: timeSpent,
+        color: colors[index % colors.length]
+      }
+    }) : [
+      { name: "Question 1", time: 180, color: "#8884d8" },
+      { name: "Question 2", time: 220, color: "#82ca9d" },
+      { name: "Question 3", time: 160, color: "#ffc658" },
+      { name: "Question 4", time: 200, color: "#ff7300" },
+      { name: "Question 5", time: 240, color: "#00ff88" },
+    ]
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -471,16 +684,22 @@ export default function InterviewAnalysisPage() {
                 <CardDescription>Your score vs ideal performance for each question</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={performanceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="question" />
-                    <YAxis domain={[0, 10]} />
-                    <Tooltip />
-                    <Bar dataKey="score" fill="#3b82f6" name="Your Score" />
-                    <Bar dataKey="ideal" fill="#e5e7eb" name="Ideal Score" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {performanceData && performanceData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="question" />
+                      <YAxis domain={[0, 10]} />
+                      <Tooltip />
+                      <Bar dataKey="score" fill="#3b82f6" name="Your Score" />
+                      <Bar dataKey="ideal" fill="#e5e7eb" name="Ideal Score" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">
+                    No performance data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -491,14 +710,20 @@ export default function InterviewAnalysisPage() {
                 <CardDescription>Your performance across different skill areas</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={skillsRadarData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="skill" />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar name="Your Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                {skillsRadarData && skillsRadarData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <RadarChart data={skillsRadarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="skill" />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                      <Radar name="Your Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">
+                    No skills data available
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -621,7 +846,7 @@ export default function InterviewAnalysisPage() {
                       Key Improvements Needed
                     </h4>
                     <ul className="space-y-2">
-                      {item.improvementAreas.map((area, areaIndex) => (
+                      {item.improvementAreas.map((area: string, areaIndex: number) => (
                         <li key={areaIndex} className="flex items-start space-x-2 text-orange-700">
                           <Target className="w-4 h-4 mt-0.5 flex-shrink-0" />
                           <span>{area}</span>
@@ -782,31 +1007,32 @@ export default function InterviewAnalysisPage() {
                   <CardDescription>How you distributed your time across questions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <Pie
-                        data={timeAllocationData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="time"
-                        label={({ name, value }) =>
-                          `${name}: ${Math.floor(value / 60)}:${(value % 60).toString().padStart(2, "0")}`
-                        }
-                      >
-                        {timeAllocationData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: any) => [
-                          `${Math.floor(value / 60)}:${(value % 60).toString().padStart(2, "0")}`,
-                          "Time",
-                        ]}
-                      />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
+                  {timeAllocationData && timeAllocationData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={timeAllocationData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="time"
+                          label={({ name, value }) =>
+                            `${name}: ${Math.floor((value as number) / 60)}:${((value as number) % 60).toString().padStart(2, "0")}`
+                          }
+                        >
+                          {timeAllocationData.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-64 text-gray-500">
+                      No time allocation data available
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -825,28 +1051,44 @@ export default function InterviewAnalysisPage() {
                       <Mic className="w-4 h-4 text-blue-600" />
                       <span className="font-medium">Speaking Pace</span>
                     </div>
-                    <span className="font-bold text-blue-600">145 WPM</span>
+                    <span className="font-bold text-blue-600">
+                      {sessionData?.voiceAnalysisHistory?.length > 0 
+                        ? Math.round(sessionData.voiceAnalysisHistory.reduce((sum: number, item: any) => sum + (item.wpm || 0), 0) / sessionData.voiceAnalysisHistory.length)
+                        : 145} WPM
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <Eye className="w-4 h-4 text-green-600" />
                       <span className="font-medium">Eye Contact</span>
                     </div>
-                    <span className="font-bold text-green-600">82%</span>
+                    <span className="font-bold text-green-600">
+                      {sessionData?.emotionHistory?.length > 0 
+                        ? Math.round(sessionData.emotionHistory.reduce((sum: number, item: any) => sum + (item.neutral || 0), 0) / sessionData.emotionHistory.length * 100)
+                        : 82}%
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <Zap className="w-4 h-4 text-orange-600" />
                       <span className="font-medium">Filler Words</span>
                     </div>
-                    <span className="font-bold text-orange-600">8 instances</span>
+                    <span className="font-bold text-orange-600">
+                      {sessionData?.voiceAnalysisHistory?.length > 0 
+                        ? sessionData.voiceAnalysisHistory.reduce((sum: number, item: any) => sum + (item.fillerWords || 0), 0)
+                        : 8} instances
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4 text-purple-600" />
                       <span className="font-medium">Engagement Level</span>
                     </div>
-                    <span className="font-bold text-purple-600">High</span>
+                    <span className="font-bold text-purple-600">
+                      {sessionData?.emotionHistory?.length > 0 
+                        ? sessionData.emotionHistory.reduce((sum: number, item: any) => sum + (item.happy || 0), 0) / sessionData.emotionHistory.length > 0.3 ? "High" : "Medium"
+                        : "High"}
+                    </span>
                   </div>
                 </CardContent>
               </Card>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,12 +23,17 @@ import {
   Play,
   Sparkles,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import RealTimeAnalysis from "@/components/real-time-analysis";
+import VoiceAnalysis from "@/components/voice-analysis";
+import { AIAvatar3D } from "@/components/3d-ai-avatar";
+import { useRouter } from "next/navigation";
 
 export default function BehavioralInterviewPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [sessionTime, setSessionTime] = useState(0)
   const [confidenceScore, setConfidenceScore] = useState(75)
+  const [emotionData, setEmotionData] = useState(null);
+  const [voiceData, setVoiceData] = useState<any>(null);
   const [isVideoOn, setIsVideoOn] = useState(true)
   const [isAudioOn, setIsAudioOn] = useState(true)
   const [isSpeakerOn, setIsSpeakerOn] = useState(true)
@@ -40,13 +45,28 @@ export default function BehavioralInterviewPage() {
   const [audioLevel, setAudioLevel] = useState(0)
   const [speechRecognition, setSpeechRecognition] = useState<any>(null)
   const [isListeningForSpeech, setIsListeningForSpeech] = useState(false)
+  const [avatarReaction, setAvatarReaction] = useState<any>(null)
+
+  // New state variables for tracking interview data
+  const [userResponses, setUserResponses] = useState<string[]>([])
+  const [questionStartTimes, setQuestionStartTimes] = useState<number[]>([])
+  const [voiceAnalysisHistory, setVoiceAnalysisHistory] = useState<any[]>([])
+  const [emotionHistory, setEmotionHistory] = useState<any[]>([])
+  const [interruptionsHandled, setInterruptionsHandled] = useState(0)
+  const [recoveryScore, setRecoveryScore] = useState(85)
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const router = useRouter()
 
-  const questions = [
+  // Check if this is a technical interview
+  const [isTechnicalInterview, setIsTechnicalInterview] = useState(false)
+  const [technicalInterviewData, setTechnicalInterviewData] = useState<any>(null)
+
+  // Default behavioral questions
+  const defaultQuestions = [
     "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
     "Describe a situation where you had to meet a tight deadline. What was your approach?",
     "Can you give me an example of a time when you had to adapt to a significant change at work?",
@@ -54,20 +74,65 @@ export default function BehavioralInterviewPage() {
     "Describe a time when you had to give constructive feedback to a colleague.",
   ]
 
-  const interviewerPersonality = {
-    name: "Sarah Chen",
-    role: "Senior Hiring Manager",
-    company: "TechCorp",
-    personality: "Professional & Analytical",
-    avatar: "/placeholder.svg?height=200&width=200",
+  // Get questions based on interview type
+  const getQuestions = () => {
+    if (isTechnicalInterview && technicalInterviewData?.questions) {
+      return technicalInterviewData.questions
+    }
+    return defaultQuestions
   }
 
-  const realTimeMetrics = {
-    eyeContact: 82,
-    speechPace: 78,
-    fillerWords: 3,
-    energy: 85,
+  const questions = getQuestions()
+
+  const getInterviewerPersonality = () => {
+    if (isTechnicalInterview) {
+      return {
+        name: "Alex Rodriguez",
+        role: "Senior Technical Hiring Manager",
+        company: "TechCorp",
+        personality: "Technical & Analytical",
+        avatar: "/placeholder.svg?height=200&width=200",
+      }
+    }
+    return {
+      name: "Sarah Chen",
+      role: "Senior Hiring Manager",
+      company: "TechCorp",
+      personality: "Professional & Analytical",
+      avatar: "/placeholder.svg?height=200&width=200",
+    }
   }
+
+  const interviewerPersonality = getInterviewerPersonality()
+
+  const handleAnalysis = useCallback((data: any) => {
+    if (data.emotion) {
+        const { happy, neutral } = data.emotion;
+        const total = Object.values(data.emotion).reduce((acc: any, val: any) => acc + (val as number), 0) as number;
+        const confidence = ((happy + neutral) / total) * 100;
+        setConfidenceScore(confidence);
+        setEmotionData(data.emotion);
+        
+        // Store emotion history for analysis
+        setEmotionHistory(prev => [...prev, { ...data.emotion, timestamp: Date.now() }]);
+    }
+  }, []);
+
+  const handleVoiceAnalysis = useCallback((data: any) => {
+    setVoiceData(data);
+    
+    // Store voice analysis history for analysis
+    setVoiceAnalysisHistory(prev => [...prev, { ...data, timestamp: Date.now() }]);
+  }, []);
+
+  const handleAvatarReaction = useCallback((reaction: any) => {
+    setAvatarReaction(reaction);
+    
+    // Track interruptions based on avatar reactions
+    if (reaction.type === 'interruption') {
+      setInterruptionsHandled(prev => prev + 1);
+    }
+  }, []);
 
   // Initialize camera and audio analysis
   useEffect(() => {
@@ -137,6 +202,15 @@ export default function BehavioralInterviewPage() {
         if (transcript.length > 10) {
           // User is actively speaking
           setIsUserSpeaking(true)
+          
+          // Store the response for the current question
+          if (isInterviewStarted && currentQuestion < questions.length) {
+            setUserResponses(prev => {
+              const newResponses = [...prev]
+              newResponses[currentQuestion] = transcript
+              return newResponses
+            })
+          }
         }
       }
 
@@ -150,6 +224,30 @@ export default function BehavioralInterviewPage() {
 
       setSpeechRecognition(recognition)
     }
+  }, [isInterviewStarted, currentQuestion, questions.length])
+
+  // Check for technical interview data on component mount
+  useEffect(() => {
+    const checkTechnicalInterview = () => {
+      // Check URL parameters for technical mode
+      const urlParams = new URLSearchParams(window.location.search)
+      const isTechnicalMode = urlParams.get('mode') === 'technical'
+      
+      if (isTechnicalMode) {
+        const technicalData = localStorage.getItem('technicalInterviewData')
+        if (technicalData) {
+          try {
+            const parsedData = JSON.parse(technicalData)
+            setTechnicalInterviewData(parsedData)
+            setIsTechnicalInterview(true)
+          } catch (error) {
+            console.error('Error parsing technical interview data:', error)
+          }
+        }
+      }
+    }
+
+    checkTechnicalInterview()
   }, [])
 
   // Monitor audio levels for visual feedback
@@ -183,7 +281,6 @@ export default function BehavioralInterviewPage() {
     if (isInterviewStarted) {
       timer = setInterval(() => {
         setSessionTime((prev) => prev + 1)
-        setConfidenceScore((prev) => Math.max(60, Math.min(95, prev + (Math.random() - 0.5) * 10)))
       }, 1000)
     }
 
@@ -206,43 +303,54 @@ export default function BehavioralInterviewPage() {
       speechRecognition.stop()
     }
 
-    // Animated typing effect
-    for (let i = 0; i <= questionText.length; i++) {
-      setCurrentQuestionText(questionText.slice(0, i))
-      await new Promise((resolve) => setTimeout(resolve, 30))
-    }
+    // Use a more efficient typing effect with requestAnimationFrame
+    const animateTyping = () => {
+      let i = 0
+      const animate = () => {
+        if (i <= questionText.length) {
+          setCurrentQuestionText(questionText.slice(0, i))
+          i++
+          setTimeout(animate, 30)
+        } else {
+          // Start speaking after typing animation completes
+          if ("speechSynthesis" in window && isSpeakerOn) {
+            const utterance = new SpeechSynthesisUtterance(questionText)
+            utterance.rate = 0.9
+            utterance.pitch = 1.1
+            utterance.voice =
+              speechSynthesis.getVoices().find((voice) => voice.name.includes("Female") || voice.name.includes("Samantha")) ||
+              speechSynthesis.getVoices()[0]
 
-    // Start speaking immediately as text appears
-    if ("speechSynthesis" in window && isSpeakerOn) {
-      const utterance = new SpeechSynthesisUtterance(questionText)
-      utterance.rate = 0.9
-      utterance.pitch = 1.1
-      utterance.voice =
-        speechSynthesis.getVoices().find((voice) => voice.name.includes("Female") || voice.name.includes("Samantha")) ||
-        speechSynthesis.getVoices()[0]
+            utterance.onend = () => {
+              setIsAvatarSpeaking(false)
+              // Start listening for user response immediately
+              if (speechRecognition) {
+                setTimeout(() => speechRecognition.start(), 500)
+              }
+            }
 
-      utterance.onend = () => {
-        setIsAvatarSpeaking(false)
-        // Start listening for user response immediately
-        if (speechRecognition) {
-          setTimeout(() => speechRecognition.start(), 500)
+            speechSynthesis.speak(utterance)
+          } else {
+            // Fallback timing
+            setTimeout(() => {
+              setIsAvatarSpeaking(false)
+              if (speechRecognition) {
+                speechRecognition.start()
+              }
+            }, questionText.length * 60)
+          }
         }
       }
-
-      speechSynthesis.speak(utterance)
-    } else {
-      // Fallback timing
-      setTimeout(() => {
-        setIsAvatarSpeaking(false)
-        if (speechRecognition) {
-          speechRecognition.start()
-        }
-      }, questionText.length * 60)
+      animate()
     }
+
+    animateTyping()
   }
 
   const startInterview = () => {
     setIsInterviewStarted(true)
+    setSessionStartTime(Date.now())
+    setQuestionStartTimes([Date.now()])
     speakQuestion(questions[currentQuestion])
   }
 
@@ -257,11 +365,34 @@ export default function BehavioralInterviewPage() {
     if (currentQuestion < questions.length - 1) {
       const nextQuestion = currentQuestion + 1
       setCurrentQuestion(nextQuestion)
+      setQuestionStartTimes(prev => [...prev, Date.now()])
       setTimeout(() => {
         speakQuestion(questions[nextQuestion])
       }, 1500)
     } else {
-      router.push("/interview/results")
+      // Store session data for analysis
+      const sessionData = {
+        type: isTechnicalInterview ? "Technical Interview" : "Behavioral Interview",
+        personality: interviewerPersonality.name,
+        questions,
+        ideal_answers: isTechnicalInterview && technicalInterviewData?.ideal_answers ? technicalInterviewData.ideal_answers : [],
+        responses: userResponses,
+        recoveryScore,
+        sessionTime,
+        interruptionsHandled,
+        deepfakeMode: false,
+        hostileMode: false,
+        voiceAnalysisHistory,
+        emotionHistory,
+        questionStartTimes,
+        sessionStartTime,
+        confidenceScore,
+        audioLevel,
+        avatarReaction,
+        technicalInterviewData: isTechnicalInterview ? technicalInterviewData : null
+      }
+      localStorage.setItem("lastInterviewSession", JSON.stringify(sessionData))
+      router.push("/interview/analysis")
     }
   }
 
@@ -272,7 +403,30 @@ export default function BehavioralInterviewPage() {
     if (speechRecognition && isListeningForSpeech) {
       speechRecognition.stop()
     }
-    router.push("/interview/results")
+    
+    // Store session data for analysis even if ending early
+    const sessionData = {
+      type: isTechnicalInterview ? "Technical Interview" : "Behavioral Interview",
+      personality: interviewerPersonality.name,
+      questions,
+      ideal_answers: isTechnicalInterview && technicalInterviewData?.ideal_answers ? technicalInterviewData.ideal_answers : [],
+      responses: userResponses,
+      recoveryScore,
+      sessionTime,
+      interruptionsHandled,
+      deepfakeMode: false,
+      hostileMode: false,
+      voiceAnalysisHistory,
+      emotionHistory,
+      questionStartTimes,
+      sessionStartTime,
+      confidenceScore,
+      audioLevel,
+      avatarReaction,
+      technicalInterviewData: isTechnicalInterview ? technicalInterviewData : null
+    }
+    localStorage.setItem("lastInterviewSession", JSON.stringify(sessionData))
+    router.push("/interview/analysis")
   }
 
   const toggleVideo = () => {
@@ -362,149 +516,23 @@ export default function BehavioralInterviewPage() {
             {/* Video Interview Panel */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* AI Interviewer */}
-              <Card className="bg-white/10 border-white/20 backdrop-blur-sm hover:bg-white/15 transition-all duration-300 transform hover:scale-[1.02]">
-                <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <div className="relative inline-block">
-                      <div
-                        className={`w-48 h-48 mx-auto rounded-lg overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center transition-all duration-500 ${
-                          isAvatarSpeaking
-                            ? "ring-4 ring-green-400 ring-opacity-75 scale-105 shadow-2xl shadow-green-400/25"
-                            : "hover:scale-105"
-                        }`}
-                      >
-                        <Avatar className="w-44 h-44">
-                          <AvatarImage
-                            src={interviewerPersonality.avatar || "/placeholder.svg"}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="text-4xl bg-gradient-to-br from-blue-500 to-indigo-500">
-                            SC
-                          </AvatarFallback>
-                        </Avatar>
-
-                        {/* Speaking animation overlay */}
-                        {isAvatarSpeaking && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-blue-400/20 animate-pulse"></div>
-                        )}
-                      </div>
-
-                      {/* Floating speaking indicators */}
-                      {isAvatarSpeaking && (
-                        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-                          <div className="flex space-x-1">
-                            <div className="w-3 h-3 bg-green-400 rounded-full animate-bounce shadow-lg"></div>
-                            <div
-                              className="w-3 h-3 bg-green-400 rounded-full animate-bounce shadow-lg"
-                              style={{ animationDelay: "0.1s" }}
-                            ></div>
-                            <div
-                              className="w-3 h-3 bg-green-400 rounded-full animate-bounce shadow-lg"
-                              style={{ animationDelay: "0.2s" }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                      <h3 className="font-bold text-lg">{interviewerPersonality.name}</h3>
-                      <p className="text-gray-300">{interviewerPersonality.role}</p>
-                      <p className="text-sm text-gray-400">{interviewerPersonality.company}</p>
-                      <Badge variant="secondary" className="mt-2 bg-white/20 hover:bg-white/30 transition-colors">
-                        {interviewerPersonality.personality}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-center space-x-2 mt-4">
-                      {isAvatarSpeaking ? (
-                        <>
-                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-green-400 font-medium">Speaking</span>
-                          <Sparkles className="w-4 h-4 text-green-400 animate-spin" />
-                        </>
-                      ) : isListeningForSpeech ? (
-                        <>
-                          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-blue-400 font-medium">Listening</span>
-                          <div className="flex space-x-1">
-                            {[...Array(3)].map((_, i) => (
-                              <div
-                                key={i}
-                                className="w-1 h-4 bg-blue-400 rounded-full animate-pulse"
-                                style={{ animationDelay: `${i * 0.2}s` }}
-                              ></div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                          <span className="text-sm text-gray-400">Waiting</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <AIAvatar3D
+                name={interviewerPersonality.name}
+                role={interviewerPersonality.role}
+                company={interviewerPersonality.company}
+                personality={interviewerPersonality.personality}
+                isSpeaking={isAvatarSpeaking}
+                isListening={isListeningForSpeech}
+                userEmotion={emotionData || undefined}
+                userVolume={audioLevel}
+                userSpeaking={isUserSpeaking}
+                onReactionChange={handleAvatarReaction}
+              />
 
               {/* User Video */}
               <Card className="bg-white/10 border-white/20 backdrop-blur-sm hover:bg-white/15 transition-all duration-300 transform hover:scale-[1.02]">
                 <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <div
-                      className={`w-48 h-48 mx-auto rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center transition-all duration-500 ${
-                        isUserSpeaking
-                          ? "ring-4 ring-blue-400 ring-opacity-75 scale-105 shadow-2xl shadow-blue-400/25"
-                          : "hover:scale-105"
-                      }`}
-                    >
-                      {isVideoOn ? (
-                        <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="text-gray-400">
-                          <VideoOff className="w-12 h-12 mb-2" />
-                          <p className="text-sm">Camera Off</p>
-                        </div>
-                      )}
-
-                      {/* Audio level visualization */}
-                      {isUserSpeaking && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse"></div>
-                      )}
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                      <h3 className="font-bold text-lg">You</h3>
-                      <p className="text-gray-300">Candidate</p>
-                    </div>
-
-                    <div className="flex items-center justify-center space-x-2 mt-4">
-                      {isUserSpeaking ? (
-                        <>
-                          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-blue-400 font-medium">Speaking</span>
-                          <div className="flex space-x-1">
-                            {[...Array(5)].map((_, i) => (
-                              <div
-                                key={i}
-                                className="w-1 bg-blue-400 rounded-full animate-pulse"
-                                style={{
-                                  height: `${Math.max(8, audioLevel / 10 + Math.random() * 16)}px`,
-                                  animationDelay: `${i * 0.1}s`,
-                                }}
-                              ></div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                          <span className="text-sm text-gray-400">Ready</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                    <RealTimeAnalysis onAnalysis={handleAnalysis} />
                 </CardContent>
               </Card>
             </div>
@@ -634,35 +662,55 @@ export default function BehavioralInterviewPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center">
                   <TrendingUp className="w-5 h-5 mr-2 text-blue-400" />
-                  Live Metrics
+                  Live Facial Analysis
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="flex items-center">
-                    <Eye className="w-4 h-4 mr-2 text-purple-400" />
-                    <span className="text-sm">Eye Contact</span>
-                  </div>
-                  <span className="font-bold text-purple-400">{realTimeMetrics.eyeContact}%</span>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="flex items-center">
-                    <MessageSquare className="w-4 h-4 mr-2 text-green-400" />
-                    <span className="text-sm">Speech Pace</span>
-                  </div>
-                  <span className="font-bold text-green-400">{realTimeMetrics.speechPace}%</span>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="flex items-center">
-                    <Zap className="w-4 h-4 mr-2 text-yellow-400" />
-                    <span className="text-sm">Energy Level</span>
-                  </div>
-                  <span className="font-bold text-yellow-400">{realTimeMetrics.energy}%</span>
-                </div>
-                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <span className="text-sm">Filler Words</span>
-                  <span className="font-bold text-orange-400">{realTimeMetrics.fillerWords}</span>
-                </div>
+                {emotionData && Object.entries(emotionData).map(([emotion, value]) => (
+                    <div key={emotion} className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center">
+                            <span className="text-sm">{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</span>
+                        </div>
+                        <span className="font-bold text-purple-400">{`${Number(value).toFixed(2)}%`}</span>
+                    </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Live Voice Analysis */}
+            <Card className="bg-white/10 border-white/20 backdrop-blur-sm hover:bg-white/15 transition-all duration-300 transform hover:scale-[1.02]">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <Mic className="w-5 h-5 mr-2 text-blue-400" />
+                  Live Voice Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <VoiceAnalysis onAnalysis={handleVoiceAnalysis} isInterviewStarted={isInterviewStarted} />
+                {voiceData && (
+                    <>
+                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <span className="text-sm">Filler Words</span>
+                            <span className="font-bold text-purple-400">{voiceData.fillerWords}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <span className="text-sm">WPM</span>
+                            <span className="font-bold text-purple-400">{voiceData.wpm}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <span className="text-sm">Volume</span>
+                            <span className="font-bold text-purple-400">{voiceData.volume}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <span className="text-sm">Confidence</span>
+                            <span className="font-bold text-purple-400">{voiceData.confidence}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                            <span className="text-sm">Clarity</span>
+                            <span className="font-bold text-purple-400">{voiceData.clarity}</span>
+                        </div>
+                    </>
+                )}
               </CardContent>
             </Card>
 
@@ -695,6 +743,26 @@ export default function BehavioralInterviewPage() {
                         <p className="text-sm">⚡ Your energy is perfect for this question type!</p>
                       </div>
                     </>
+                  )}
+                  {avatarReaction && avatarReaction.type === "annoyed" && (
+                    <div className="p-3 bg-black/30 rounded-lg border-l-4 border-red-400 animate-pulse">
+                      <p className="text-sm">🔇 Try speaking a bit softer - the interviewer seems bothered by the volume</p>
+                    </div>
+                  )}
+                  {avatarReaction && avatarReaction.type === "happy" && (
+                    <div className="p-3 bg-black/30 rounded-lg border-l-4 border-green-400 animate-pulse">
+                      <p className="text-sm">😊 Excellent! The interviewer is responding positively to your answer</p>
+                    </div>
+                  )}
+                  {avatarReaction && avatarReaction.type === "surprised" && (
+                    <div className="p-3 bg-black/30 rounded-lg border-l-4 border-yellow-400 animate-pulse">
+                      <p className="text-sm">😲 Wow! Your answer really caught their attention - great job!</p>
+                    </div>
+                  )}
+                  {avatarReaction && avatarReaction.type === "thinking" && (
+                    <div className="p-3 bg-black/30 rounded-lg border-l-4 border-orange-400 animate-pulse">
+                      <p className="text-sm">🤔 The interviewer is processing your response - this is a good sign!</p>
+                    </div>
                   )}
                   {!isInterviewStarted && (
                     <div className="p-3 bg-black/30 rounded-lg border-l-4 border-green-400">

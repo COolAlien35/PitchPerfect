@@ -1,13 +1,12 @@
-import dbConnect from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
-import User from '@/models/User';
+import { db } from '@/src/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export async function POST(req: NextRequest) {
-  await dbConnect();
   try {
-    const { idToken } = await req.json();
+    const { idToken, uid } = await req.json(); // Added uid
 
     if (!process.env.JWT_SECRET) {
       return NextResponse.json({ error: 'JWT_SECRET not configured' }, { status: 500 });
@@ -16,26 +15,33 @@ export async function POST(req: NextRequest) {
     const googleResp = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
     const { email, name, picture, sub: googleId } = googleResp.data;
 
-    let user = await User.findOne({ email });
+    const userRef = doc(db, 'users', uid); // Changed to uid
+    const userSnap = await getDoc(userRef);
+
+    let user = userSnap.exists() ? userSnap.data() : null;
 
     if (!user) {
-      user = await User.create({
+      const newUser = {
         name,
         email,
         googleId,
         photo: picture,
         roles: ['user'],
-      });
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(userRef, newUser);
+      user = newUser;
     } else if (!user.googleId) {
-      user.googleId = googleId;
-      user.photo = picture;
-      await user.save();
+      // Update existing user if googleId is missing
+      await setDoc(userRef, { googleId, photo: picture }, { merge: true });
+      user = { ...user, googleId, photo: picture };
     }
 
-    const token = jwt.sign({ id: user._id, email }, process.env.JWT_SECRET, { expiresIn: '2d' });
+    const token = jwt.sign({ id: uid, email: user.email }, "9b68f9e05278a077f736cb566186c7437d9afd075e5c8c3170ead132bb4a77e3", { expiresIn: '2d' });
 
     return NextResponse.json({ token });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Google Login failed: ' + err.message }, { status: 400 });
+    console.error("Google Login API Error:", err);
+    return NextResponse.json({ error: 'Google Login failed: ' + err.message, details: err.stack }, { status: 400 });
   }
 }
