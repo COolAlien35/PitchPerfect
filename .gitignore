@@ -1,1 +1,63 @@
-node_modules
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Next.js build output
+.next/
+out/
+dist/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs
+*.pid
+*.seed
+*.pid.lock
+
+# Mac / OS
+.DS_Store
+Thumbs.db
+
+# Python (for your python-voice-analysis-service)
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+*.pyo
+*.pyd
+*.pdb
+*.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
