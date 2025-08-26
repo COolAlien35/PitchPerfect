@@ -71,7 +71,7 @@ export default function LoginPage() {
               <Brain className="w-7 h-7 text-white" />
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              InterviewAce AI
+              PitchPerfect
             </span>
           </div>
           <h1 className="text-2xl font-bold mb-2">{isSignUp ? "Create an Account" : "Welcome Back"}</h1>

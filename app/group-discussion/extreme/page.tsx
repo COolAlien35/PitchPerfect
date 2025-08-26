@@ -172,7 +172,7 @@ export default function ExtremeGroupDiscussionPage() {
               <Flame className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-              InterviewAce AI
+              PitchPerfect
             </span>
           </div>
           <nav className="flex items-center space-x-4">

@@ -95,7 +95,7 @@ export default function OnboardingPage() {
               <Brain className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              InterviewAce AI
+              PitchPerfect
             </span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome to Your Interview Journey</h1>

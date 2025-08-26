@@ -15,7 +15,7 @@ export default function HomePage() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              InterviewAce AI
+              PitchPerfect
             </span>
           </div>
           <nav className="hidden md:flex items-center space-x-6">
@@ -54,9 +54,7 @@ export default function HomePage() {
                 Start Free Practice <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-transparent">
-              Watch Demo
-            </Button>
+            
           </div>
 
           {/* Stats */}
@@ -166,7 +164,7 @@ export default function HomePage() {
         <div className="container mx-auto text-center max-w-4xl">
           <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Interview Skills?</h2>
           <p className="text-xl mb-8 opacity-90">
-            Join thousands of professionals who have already improved their interview performance with InterviewAce AI
+            Join thousands of professionals who have already improved their interview performance with PitchPerfect
           </p>
           <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
             <Link href="/onboarding">
@@ -183,10 +181,10 @@ export default function HomePage() {
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-2">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">InterviewAce AI</span>
+            <span className="text-xl font-bold">PitchPerfect</span>
           </div>
           <div className="text-center text-gray-400">
-            <p>&copy; 2024 InterviewAce AI. All rights reserved.</p>
+            <p>&copy; 2025 PitchPerfect. All rights reserved.</p>
           </div>
         </div>
       </footer>
