@@ -5,8 +5,8 @@ import './globals.css'
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'PitchPerfect',
+  description: 'Your Personal Interview & Pitch Assistant - AI-powered interview training and coaching',
   generator: 'v0.dev',
 }
 

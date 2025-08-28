@@ -26,7 +26,7 @@ export default function HomePage() {
             <Link href="#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Pricing</Link>
             <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Login</Link>
             <Button asChild className="ml-1">
-              <Link href="/onboarding">Get started</Link>
+              <Link href="/login?mode=signup">Get started</Link>
             </Button>
           </nav>
         </div>
@@ -43,7 +43,7 @@ export default function HomePage() {
           </p>
           <div className="mb-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/onboarding">Start free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              <Link href="/login?mode=signup">Start free <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="#features">See features</Link>
@@ -114,7 +114,7 @@ export default function HomePage() {
           <h2 className="mb-4 text-3xl font-semibold md:text-4xl">Ready to improve with less noise?</h2>
           <p className="mb-8 text-muted-foreground">Join thousands leveling up their interview skills with clarity and focus.</p>
           <Button size="lg" asChild>
-            <Link href="/onboarding">Start your free trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
+            <Link href="/login?mode=signup">Start your free trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
       </section>
