@@ -1,3 +1,141 @@
+/* Feature card hover effect */
+.feature-card {
+  background: rgba(34, 18, 54, 0.85);
+  border: 2px solid rgb(255, 255, 255);
+  border-radius: 1.2rem;
+  box-shadow: 0 2px 16px 0 rgba(120, 60, 200, 0.10);
+  transition: box-shadow 0.25s, border 0.25s, transform 0.18s;
+  cursor: pointer;
+}
+.feature-card:hover {
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 24px 0 #a259f7, 0 0 48px 0 #6a00f4;
+  transform: translateY(-6px) scale(1.03);
+  background: linear-gradient(120deg, rgba(162,89,247,0.18) 0%, rgba(106,0,244,0.12) 100%);
+}
+body {
+  background: linear-gradient(120deg, #1a103a 0%, #2d0b4e 100%) !important;
+  color: #e5e7ef;
+}
+
+/* Main container for glass effect */
+.glassmorphism {
+  background: rgba(34, 18, 54, 0.7);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(180, 100, 255, 0.12);
+}
+
+/* Card style for question/stat blocks */
+.modern-card {
+  background: rgba(34, 18, 54, 0.85);
+  border-radius: 1.2rem;
+  border: 1px solid rgba(180, 100, 255, 0.18);
+  box-shadow: 0 2px 16px 0 rgba(120, 60, 200, 0.10);
+  padding: 2rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Accent purple for buttons, badges, etc */
+.accent-purple {
+  background: linear-gradient(90deg, #a259f7 0%, #6a00f4 100%);
+  color: #fff !important;
+  border: none;
+  box-shadow: 0 0 16px #a259f7, 0 0 32px #6a00f4;
+  transition: filter 0.2s;
+}
+.accent-purple:hover {
+  filter: brightness(1.1) saturate(1.2);
+}
+
+/* For section headings */
+.section-title {
+  color: #c3a6ff;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 24px #a259f7;
+}
+
+/* For subtitle text */
+.subtitle {
+  color: #b8b8d9;
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+/* Tag style */
+.tag-purple {
+  background: #2d0b4e;
+  color: #c3a6ff;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.95rem;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+}
+
+/* Stat block */
+.stat-block {
+  background: rgba(34, 18, 54, 0.85);
+  border-radius: 1rem;
+  border: 1px solid rgba(180, 100, 255, 0.10);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #e5e7ef;
+  margin-bottom: 1rem;
+}
+
+/* For solved badge */
+.solved-badge {
+  background: linear-gradient(90deg, #a259f7 0%, #6a00f4 100%);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-left: 1rem;
+}
+/* Glassmorphism utility */
+.glassmorphism {
+  background: rgba(30, 18, 54, 0.55);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Soft glow for headings/buttons */
+.soft-glow {
+  text-shadow: 0 0 16px #a259f7, 0 0 32px #6a00f4;
+  filter: drop-shadow(0 0 8px #a259f7);
+}
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 6s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -479,4 +617,42 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* Rainbow border hover effect */
+.rainbow-hover {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.rainbow-hover::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.5rem;
+  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+  background-size: 400% 400%;
+  animation: rainbow-shift 3s ease infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.rainbow-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  background: hsl(var(--card));
+  z-index: -1;
+}
+
+.rainbow-hover:hover::before {
+  opacity: 1;
+}
+
+@keyframes rainbow-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

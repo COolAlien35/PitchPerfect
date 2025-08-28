@@ -1,191 +1,134 @@
+
+
+"use client";
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Brain, Target, Trophy, Users, Zap, Shield, Star } from "lucide-react"
 import Link from "next/link"
+import ParticlesBackground from "@/components/Particles"
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-background via-background to-background">
+      <ParticlesBackground />
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+      <header className="sticky top-0 z-20 w-full border-b bg-background/70 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Brain className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              PitchPerfect
-            </span>
+            <span className="text-xl font-semibold tracking-tight">PitchPerfect</span>
           </div>
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">
-              Features
-            </Link>
-            <Link href="#pricing" className="text-gray-600 hover:text-blue-600 transition-colors">
-              Pricing
-            </Link>
-            <Link href="/login" className="text-gray-600 hover:text-blue-600 transition-colors">
-              Login
-            </Link>
-            <Button asChild>
-              <Link href="/onboarding">Get Started</Link>
+          <nav className="hidden items-center gap-3 md:flex">
+            <Link href="#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Features</Link>
+            <Link href="#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Pricing</Link>
+            <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Login</Link>
+            <Button asChild className="ml-1">
+              <Link href="/onboarding">Get started</Link>
             </Button>
           </nav>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-200">
-            🚀 AI-Powered Interview Preparation
-          </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
-            Master Your Next Interview with AI
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Transform your interview skills through immersive AI simulations, real-time coaching, and gamified learning.
-            Build confidence with realistic practice scenarios.
+      <section className="relative z-10 px-4 py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <Badge className="mb-4 bg-primary/10 text-primary">AI-powered interview training</Badge>
+          <h1 className="mb-2 text-4xl font-semibold tracking-tight md:text-5xl">PitchPerfect</h1>
+          <h2 className="mb-4 text-xl text-muted-foreground md:text-2xl">Your Personal Interview & Pitch Assistant</h2>
+          <p className="mx-auto mb-10 max-w-2xl text-base text-muted-foreground md:text-lg">
+            Transform your interview performance with AI-powered coaching, real-time feedback, and personalized practice sessions. Master any pitch with confidence.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" className="text-lg px-8 py-6" asChild>
-              <Link href="/onboarding">
-                Start Free Practice <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
+          <div className="mb-10 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button size="lg" asChild>
+              <Link href="/onboarding">Start free <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
-            
+            <Button size="lg" variant="outline" asChild>
+              <Link href="#features">See features</Link>
+            </Button>
           </div>
-
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">95%</div>
-              <div className="text-gray-600">Success Rate Improvement</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-indigo-600 mb-2">50K+</div>
-              <div className="text-gray-600">Interviews Practiced</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">4.9★</div>
-              <div className="text-gray-600">User Rating</div>
-            </div>
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            {[{v:"95%", l:"Improvement"},{v:"50k+", l:"Sessions"},{v:"4.9★", l:"Rating"}].map((s, i) => (
+              <div key={i} className="rounded-lg border bg-card p-6 text-center shadow-sm transition-transform duration-300 hover:-translate-y-1">
+                <div className="mb-1 text-3xl font-semibold">{s.v}</div>
+                <div className="text-sm text-muted-foreground">{s.l}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 bg-white">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Powerful AI-Driven Features</h2>
-            <p className="text-xl text-gray-600">Everything you need to ace your next interview</p>
+      <section id="features" className="relative z-10 px-4 py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="mb-2 text-3xl font-semibold md:text-4xl">Powerful Features</h2>
+            <p className="text-muted-foreground">Comprehensive tools and AI-powered features designed to transform your interview performance and boost your confidence.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="border-2 hover:border-blue-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <CardTitle>AI Interview Panels</CardTitle>
-                <CardDescription>
-                  Practice with diverse AI interviewers featuring different personalities and questioning styles
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-indigo-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-indigo-600" />
-                </div>
-                <CardTitle>Real-Time Coaching</CardTitle>
-                <CardDescription>
-                  Get instant feedback on your speech, body language, and confidence levels during practice
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-purple-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="w-6 h-6 text-purple-600" />
-                </div>
-                <CardTitle>Smart Question Generation</CardTitle>
-                <CardDescription>
-                  AI analyzes your resume to generate personalized, role-specific interview questions
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-green-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <Trophy className="w-6 h-6 text-green-600" />
-                </div>
-                <CardTitle>Gamified Learning</CardTitle>
-                <CardDescription>
-                  Earn XP, unlock badges, and compete on leaderboards while improving your skills
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-orange-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-orange-600" />
-                </div>
-                <CardTitle>Pressure Mode</CardTitle>
-                <CardDescription>
-                  Simulate high-stress interview environments with time pressure and challenging scenarios
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-pink-200 transition-colors">
-              <CardHeader>
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
-                  <Star className="w-6 h-6 text-pink-600" />
-                </div>
-                <CardTitle>Skill Verification</CardTitle>
-                <CardDescription>
-                  Earn blockchain-verified skill badges that employers can trust and validate
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[{
+              icon: Users,
+              title: 'AI interview panels',
+              desc: 'Practice with diverse AI interviewers and styles.'
+            },{
+              icon: Zap,
+              title: 'Real-time coaching',
+              desc: 'Instant feedback on delivery and body language.'
+            },{
+              icon: Target,
+              title: 'Smart questions',
+              desc: 'Resume-aware, role-specific question sets.'
+            },{
+              icon: Trophy,
+              title: 'Progress that matters',
+              desc: 'Track improvement without noisy gamification.'
+            },{
+              icon: Shield,
+              title: 'Pressure practice',
+              desc: 'Simulate tough scenarios calmly and safely.'
+            },{
+              icon: Star,
+              title: 'Skill verification',
+              desc: 'Share credible proof of your interview skills.'
+            }].map((f, i) => (
+              <Card key={i} className="rainbow-hover group border bg-card/60 backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <f.icon className="h-6 w-6" />
+                  </div>
+                  <CardTitle>{f.title}</CardTitle>
+                  <CardDescription>{f.desc}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Interview Skills?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join thousands of professionals who have already improved their interview performance with PitchPerfect
-          </p>
-          <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
-            <Link href="/onboarding">
-              Start Your Free Trial <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
+      <section className="relative z-10 px-4 py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="mb-4 text-3xl font-semibold md:text-4xl">Ready to improve with less noise?</h2>
+          <p className="mb-8 text-muted-foreground">Join thousands leveling up their interview skills with clarity and focus.</p>
+          <Button size="lg" asChild>
+            <Link href="/onboarding">Start your free trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
-        <div className="container mx-auto">
-          <div className="flex items-center justify-center mb-8">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-2">
-              <Brain className="w-5 h-5 text-white" />
+      <footer className="relative z-10 px-4 py-12">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="mb-4 inline-flex items-center justify-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Brain className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">PitchPerfect</span>
+            <span className="text-xl font-semibold">PitchPerfect</span>
           </div>
-          <div className="text-center text-gray-400">
-            <p>&copy; 2025 PitchPerfect. All rights reserved.</p>
-          </div>
+          <div className="text-sm text-muted-foreground">© 2025 PitchPerfect. All rights reserved.</div>
         </div>
       </footer>
     </div>

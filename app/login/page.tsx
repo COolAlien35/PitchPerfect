@@ -32,7 +32,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      alert("Authentication failed: " + err.message);
+      alert("Authentication failed: " + (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
       // Store JWT in localStorage/cookies and call onLoginSuccess(data.token), etc.
       router.push("/dashboard");
     } catch (err) {
-      alert("Google Sign-In failed: " + err.message);
+      alert("Google Sign-In failed: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 

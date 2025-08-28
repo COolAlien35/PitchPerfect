@@ -77,32 +77,30 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b bg-background/70 backdrop-blur-md">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Brain className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              PitchPerfect
-            </span>
+            <span className="text-xl font-semibold">PitchPerfect</span>
           </div>
-          <nav className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              <Calendar className="w-4 h-4 mr-2" />
+          <nav className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Calendar className="mr-2 h-4 w-4" />
               Schedule
             </Button>
-            <Button variant="ghost" size="sm">
-              <BarChart3 className="w-4 h-4 mr-2" />
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">JD</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <span className="text-sm font-medium">JD</span>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -130,58 +128,58 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="transition-transform duration-300 hover:-translate-y-1">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total Sessions</p>
                   <p className="text-2xl font-bold">{userStats.totalSessions}</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Play className="w-6 h-6 text-blue-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Play className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-transform duration-300 hover:-translate-y-1">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Average Score</p>
                   <p className="text-2xl font-bold">{userStats.averageScore}/10</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Target className="w-6 h-6 text-green-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Target className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-transform duration-300 hover:-translate-y-1">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Improvement</p>
                   <p className="text-2xl font-bold">+{userStats.improvementRate}%</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <TrendingUp className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-transform duration-300 hover:-translate-y-1">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Current Streak</p>
                   <p className="text-2xl font-bold">{userStats.currentStreak} days</p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-orange-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Zap className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
@@ -193,10 +191,10 @@ export default function DashboardPage() {
           {/* Left Column - Practice Options */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Start */}
-            <Card>
+            <Card className="transition-transform duration-300 hover:-translate-y-1">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Play className="w-5 h-5 mr-2 text-blue-600" />
+                  <Play className="mr-2 h-5 w-5 text-primary" />
                   Quick Start Practice
                 </CardTitle>
                 <CardDescription>Jump into a practice session right away</CardDescription>
@@ -209,25 +207,25 @@ export default function DashboardPage() {
                       <span>Behavioral Interview</span>
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
+                  <Button asChild variant="outline" className="h-20 flex-col space-y-2">
                     <Link href="/interview/technical">
                       <Brain className="w-6 h-6" />
                       <span>Technical Interview</span>
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
+                  <Button asChild variant="outline" className="h-20 flex-col space-y-2">
                     <Link href="/interview/pressure">
                       <Zap className="w-6 h-6" />
                       <span>Pressure Mode</span>
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
+                  <Button asChild variant="outline" className="h-20 flex-col space-y-2">
                     <Link href="/interview/custom">
                       <Target className="w-6 h-6" />
                       <span>Custom Session</span>
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
+                  <Button asChild variant="outline" className="h-20 flex-col space-y-2">
                     <Link href="/group-discussion">
                       <Users className="w-6 h-6" />
                       <span>Group Discussion</span>
@@ -236,11 +234,11 @@ export default function DashboardPage() {
                   <Button
                     asChild
                     variant="outline"
-                    className="h-20 flex-col space-y-2 bg-transparent border-red-200 hover:bg-red-50"
+                    className="h-20 flex-col space-y-2"
                   >
                     <Link href="/interview/challenge">
-                      <Flame className="w-6 h-6 text-red-500" />
-                      <span className="text-red-600">Extreme Challenge</span>
+                      <Flame className="w-6 h-6" />
+                      <span>Extreme Challenge</span>
                     </Link>
                   </Button>
                 </div>
@@ -248,12 +246,12 @@ export default function DashboardPage() {
             </Card>
 
             {/* New Extreme Modes */}
-            <Card className="border-2 border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center text-red-700">
-                  <Flame className="w-5 h-5 mr-2" />🔥 NEW: Extreme Challenge Modes
+                <CardTitle className="flex items-center">
+                  <Flame className="w-5 h-5 mr-2" /> New: Extreme Challenge Modes
                 </CardTitle>
-                <CardDescription className="text-red-600">
+                <CardDescription>
                   Push your limits with AI personality cloning, deepfake testing, and hostile scenarios
                 </CardDescription>
               </CardHeader>
@@ -261,36 +259,36 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Button
                     asChild
-                    className="h-24 flex-col space-y-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+                    className="h-24 flex-col space-y-2"
                   >
                     <Link href="/interview/challenge">
                       <Shield className="w-8 h-8" />
-                      <span className="font-bold">Interrupt & Recover</span>
-                      <span className="text-xs opacity-90">Random interruptions + AI cloning</span>
+                      <span className="font-medium">Interrupt & Recover</span>
+                      <span className="text-xs text-muted-foreground">Random interruptions + AI cloning</span>
                     </Link>
                   </Button>
                   <Button
                     asChild
-                    className="h-24 flex-col space-y-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    className="h-24 flex-col space-y-2"
                   >
                     <Link href="/group-discussion/extreme">
                       <Sparkles className="w-8 h-8" />
-                      <span className="font-bold">Extreme Group Discussion</span>
-                      <span className="text-xs opacity-90">Hostile judges + deepfake mode</span>
+                      <span className="font-medium">Extreme Group Discussion</span>
+                      <span className="text-xs text-muted-foreground">Hostile judges + deepfake mode</span>
                     </Link>
                   </Button>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge className="bg-red-500 text-white">AI Personality Cloning</Badge>
-                  <Badge className="bg-orange-500 text-white">Deepfake Testing</Badge>
-                  <Badge className="bg-purple-500 text-white">Hostile Scenarios</Badge>
-                  <Badge className="bg-blue-500 text-white">Random Interruptions</Badge>
+                  <Badge>AI Personality Cloning</Badge>
+                  <Badge>Deepfake Testing</Badge>
+                  <Badge>Hostile Scenarios</Badge>
+                  <Badge>Random Interruptions</Badge>
                 </div>
               </CardContent>
             </Card>
 
             {/* Recent Sessions */}
-            <Card>
+            <Card className="transition-transform duration-300 hover:-translate-y-1">
               <CardHeader>
                 <CardTitle>Recent Sessions</CardTitle>
                 <CardDescription>Your latest practice sessions and scores</CardDescription>
@@ -298,21 +296,21 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   {recentSessions.map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={session.id} className="flex items-center justify-between rounded-lg border p-4">
                       <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Play className="w-5 h-5 text-blue-600" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Play className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-medium">{session.type}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {session.date} • {session.duration}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="flex items-center space-x-2">
-                          <Star className="w-4 h-4 text-yellow-500" />
+                          <Star className="h-4 w-4 text-yellow-500" />
                           <span className="font-bold">{session.score}/10</span>
                         </div>
                       </div>
@@ -326,10 +324,10 @@ export default function DashboardPage() {
           {/* Right Column - Progress & Badges */}
           <div className="space-y-6">
             {/* Progress Card */}
-            <Card>
+            <Card className="transition-transform duration-300 hover:-translate-y-1">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
+                  <Trophy className="mr-2 h-5 w-5 text-primary" />
                   Your Progress
                 </CardTitle>
               </CardHeader>
@@ -341,9 +339,9 @@ export default function DashboardPage() {
                   </div>
                   <Progress value={75} className="h-2" />
                 </div>
-                <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                  <Award className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <p className="font-medium text-blue-900">3 more sessions to unlock!</p>
+                <div className="rounded-lg border p-4 text-center">
+                  <Award className="mx-auto mb-2 h-8 w-8 text-primary" />
+                  <p className="font-medium">3 more sessions to unlock!</p>
                 </div>
               </CardContent>
             </Card>
@@ -374,41 +372,41 @@ export default function DashboardPage() {
             </Card>
 
             {/* Daily Challenge */}
-            <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center text-purple-800">
-                  <Zap className="w-5 h-5 mr-2" />
+                <CardTitle className="flex items-center">
+                  <Zap className="mr-2 h-5 w-5 text-primary" />
                   Daily Challenge
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-purple-700 mb-4">
+                <p className="mb-4 text-sm text-muted-foreground">
                   Complete a 10-minute pressure mode session to earn bonus XP!
                 </p>
-                <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700">
+                <Button size="sm" className="w-full">
                   Start Challenge
                 </Button>
               </CardContent>
             </Card>
 
             {/* Extreme Mode Teaser */}
-            <Card className="border-2 border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center text-red-800">
-                  <Flame className="w-5 h-5 mr-2" />🔥 Extreme Mode
+                <CardTitle className="flex items-center">
+                  <Flame className="mr-2 h-5 w-5 text-primary" /> Extreme Mode
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-red-700 mb-4">
+                <p className="mb-4 text-sm text-muted-foreground">
                   Ready for the ultimate challenge? Face AI personality clones and hostile scenarios!
                 </p>
                 <Button
                   size="sm"
-                  className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700"
+                  className="w-full"
                   asChild
                 >
                   <Link href="/interview/challenge">
-                    <Shield className="w-4 h-4 mr-2" />
+                    <Shield className="mr-2 h-4 w-4" />
                     Enter the Fire
                   </Link>
                 </Button>
