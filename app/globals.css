@@ -148,7 +148,7 @@ body {
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 280 65% 60%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -160,7 +160,7 @@ body {
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 280 65% 60%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -176,7 +176,7 @@ body {
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 280 65% 60%;
     --primary-foreground: 222.2 84% 4.9%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -188,7 +188,7 @@ body {
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 280 65% 60%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -296,13 +296,13 @@ body {
 
 @keyframes mood-glow {
   0% {
-    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
   }
   50% {
-    filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.6));
   }
   100% {
-    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
   }
 }
 
@@ -576,10 +576,10 @@ body {
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
   }
 }
 
@@ -655,4 +655,140 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* Pink and Purple Gradient Classes */
+.gradient-primary {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.gradient-primary-text {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.gradient-primary-border {
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%) border-box;
+  background-clip: border-box;
+}
+
+/* Subtle gradient border for outline buttons */
+.gradient-border-subtle {
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%) border-box;
+  background-clip: border-box;
+  background-color: transparent;
+  color: #ec4899;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 0 rgba(236, 72, 153, 0);
+}
+
+.gradient-border-subtle:hover {
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.3), 0 0 0 4px rgba(168, 85, 247, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Dark subtle button style like StackIt's Browse Questions button */
+.btn-dark-subtle {
+  background: rgba(15, 23, 42, 0.8);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.btn-dark-subtle:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gradient-primary-shadow {
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), 0 0 40px rgba(168, 85, 247, 0.2);
+}
+
+.gradient-primary-glow {
+  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.5)) drop-shadow(0 0 20px rgba(168, 85, 247, 0.3));
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Enhanced button styles with pink/purple gradient */
+.btn-gradient-primary {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.btn-gradient-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4), 0 5px 15px rgba(168, 85, 247, 0.3);
+}
+
+/* Icon gradient styles */
+.icon-gradient {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Badge gradient styles */
+.badge-gradient {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);
+}
+
+/* Enhanced hover effects for navigation links */
+a:hover.gradient-primary-text {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Enhanced button hover effects */
+.btn-gradient-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4), 0 5px 15px rgba(168, 85, 247, 0.3);
+  filter: brightness(1.1) saturate(1.2);
+}
+
+/* Enhanced card hover effects with gradient */
+.rainbow-hover:hover {
+  border-color: #ec4899;
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.2), 0 0 60px rgba(168, 85, 247, 0.1);
+}
+
+/* Gradient text animation for headings */
+.gradient-primary-text {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 3s ease infinite;
+  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.3));
 }

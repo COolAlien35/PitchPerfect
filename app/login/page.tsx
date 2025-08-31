@@ -81,10 +81,10 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+              <div className="w-12 h-12 gradient-primary rounded-lg flex items-center justify-center mr-3">
                 <Brain className="w-7 h-7 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold gradient-primary-text">
                 PitchPerfect
               </span>
             </div>
@@ -144,12 +144,12 @@ export default function LoginPage() {
                         Remember me
                       </Label>
                     </div>
-                    <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                    <Link href="/forgot-password" className="text-sm gradient-primary-text hover:underline">
                       Forgot password?
                     </Link>
                   </div>
                 )}
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full btn-gradient-primary">
                   {isSignUp ? "Sign Up" : "Sign In"}
                 </Button>
               </form>
@@ -164,7 +164,7 @@ export default function LoginPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" onClick={handleGoogleLogin}>
+                <Button variant="outline" onClick={handleGoogleLogin} className="btn-dark-subtle">
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -185,7 +185,7 @@ export default function LoginPage() {
                   </svg>
                   Google
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" className="btn-dark-subtle">
                   <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
@@ -199,7 +199,7 @@ export default function LoginPage() {
 
               <div className="text-center text-sm">
                 {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-                <button onClick={() => setIsSignUp(!isSignUp)} className="text-blue-600 hover:underline font-medium">
+                <button onClick={() => setIsSignUp(!isSignUp)} className="gradient-primary-text hover:underline font-medium">
                   {isSignUp ? "Sign In" : "Sign up"}
                 </button>
               </div>

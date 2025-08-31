@@ -16,16 +16,16 @@ export default function HomePage() {
       <header className="sticky top-0 z-20 w-full border-b bg-background/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Brain className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
+              <Brain className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">PitchPerfect</span>
+            <span className="text-xl font-semibold tracking-tight gradient-primary-text">PitchPerfect</span>
           </div>
           <nav className="hidden items-center gap-3 md:flex">
-            <Link href="#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Features</Link>
-            <Link href="#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Pricing</Link>
-            <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Login</Link>
-            <Button asChild className="ml-1">
+            <Link href="#features" className="text-sm text-muted-foreground transition-all duration-300 hover:gradient-primary-text">Features</Link>
+            <Link href="#pricing" className="text-sm text-muted-foreground transition-all duration-300 hover:gradient-primary-text">Pricing</Link>
+            <Link href="/login" className="text-sm text-muted-foreground transition-all duration-300 hover:gradient-primary-text">Login</Link>
+            <Button asChild className="ml-1 btn-gradient-primary">
               <Link href="/login?mode=signup">Get started</Link>
             </Button>
           </nav>
@@ -35,19 +35,19 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative z-10 px-4 py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <Badge className="mb-4 bg-primary/10 text-primary">AI-powered interview training</Badge>
-          <h1 className="mb-2 text-4xl font-semibold tracking-tight md:text-5xl">PitchPerfect</h1>
+          <Badge className="mb-4 badge-gradient">AI-powered interview training</Badge>
+          <h1 className="mb-2 text-4xl font-semibold tracking-tight md:text-5xl gradient-primary-text">PitchPerfect</h1>
           <h2 className="mb-4 text-xl text-muted-foreground md:text-2xl">Your Personal Interview & Pitch Assistant</h2>
           <p className="mx-auto mb-10 max-w-2xl text-base text-muted-foreground md:text-lg">
             Transform your interview performance with AI-powered coaching, real-time feedback, and personalized practice sessions. Master any pitch with confidence.
           </p>
           <div className="mb-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button size="lg" asChild>
+            <Button size="lg" asChild className="btn-gradient-primary">
               <Link href="/login?mode=signup">Start free <ArrowRight className="ml-2 h-5 w-5" /></Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="#features">See features</Link>
-            </Button>
+                         <Button size="lg" variant="outline" asChild className="btn-dark-subtle">
+               <Link href="#features">See features</Link>
+             </Button>
           </div>
           {/* Stats */}
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -65,7 +65,7 @@ export default function HomePage() {
       <section id="features" className="relative z-10 px-4 py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto mb-12 max-w-2xl text-center">
-            <h2 className="mb-2 text-3xl font-semibold md:text-4xl">Powerful Features</h2>
+            <h2 className="mb-2 text-3xl font-semibold md:text-4xl gradient-primary-text">Powerful Features</h2>
             <p className="text-muted-foreground">Comprehensive tools and AI-powered features designed to transform your interview performance and boost your confidence.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -96,7 +96,7 @@ export default function HomePage() {
             }].map((f, i) => (
               <Card key={i} className="rainbow-hover group border bg-card/60 backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
                 <CardHeader>
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md gradient-primary text-white">
                     <f.icon className="h-6 w-6" />
                   </div>
                   <CardTitle>{f.title}</CardTitle>
@@ -111,9 +111,9 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="relative z-10 px-4 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="mb-4 text-3xl font-semibold md:text-4xl">Ready to improve with less noise?</h2>
+          <h2 className="mb-4 text-3xl font-semibold md:text-4xl gradient-primary-text">Ready to improve with less noise?</h2>
           <p className="mb-8 text-muted-foreground">Join thousands leveling up their interview skills with clarity and focus.</p>
-          <Button size="lg" asChild>
+          <Button size="lg" asChild className="btn-gradient-primary">
             <Link href="/login?mode=signup">Start your free trial <ArrowRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
@@ -123,10 +123,10 @@ export default function HomePage() {
       <footer className="relative z-10 px-4 py-12">
         <div className="mx-auto max-w-3xl text-center">
           <div className="mb-4 inline-flex items-center justify-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Brain className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
+              <Brain className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-semibold">PitchPerfect</span>
+            <span className="text-xl font-semibold gradient-primary-text">PitchPerfect</span>
           </div>
           <div className="text-sm text-muted-foreground">© 2025 PitchPerfect. All rights reserved.</div>
         </div>
