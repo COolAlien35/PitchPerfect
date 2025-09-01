@@ -40,11 +40,10 @@ export default function LoginPage() {
       if (isSignUp) {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Create user profile in Firestore
+        // Create basic user profile in Firestore - name will be set during onboarding
         if (result.user) {
           const userRef = doc(db, 'users', result.user.uid);
           await setDoc(userRef, {
-            name: email.split('@')[0], // Use email prefix as default name
             email: email,
             createdAt: new Date().toISOString(),
             roles: ['user'],

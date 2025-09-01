@@ -53,6 +53,11 @@ export default function DashboardPage() {
   const router = useRouter()
   const { user, userProfile, loading } = useAuth()
 
+  // Debug logging
+  console.log('Dashboard - User:', user)
+  console.log('Dashboard - UserProfile:', userProfile)
+  console.log('Dashboard - Loading:', loading)
+
   const handleLogout = async () => {
     try {
       await signOut(auth)

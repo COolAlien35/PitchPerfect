@@ -41,6 +41,16 @@ interface UserProfile {
   createdAt?: string;
   linkedinUrl?: string;
   resumeDriveUrl?: string;
+  phone?: string;
+  bio?: string;
+  experience?: string;
+  targetRole?: string;
+  industry?: string;
+  company?: string;
+  education?: string;
+  skills?: string[];
+  goals?: string[];
+  githubUrl?: string;
   stats?: UserStats;
   sessions?: UserSession[];
   badges?: UserBadge[];
@@ -50,6 +60,23 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const profile = userSnap.data() as UserProfile;
+        setUserProfile(profile);
+        console.log('Refreshed profile:', profile); // Debug log
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -65,13 +92,15 @@ export function useAuth() {
           
           if (userSnap.exists()) {
             profile = userSnap.data() as UserProfile;
+            console.log('Loaded existing profile:', profile); // Debug log
           } else {
             // If no profile exists, create a basic one from auth user
             profile = {
-              name: user.displayName || user.email?.split('@')[0] || 'User',
+              name: user.displayName || 'User',
               email: user.email || '',
               photo: user.photoURL || undefined,
             };
+            console.log('Created basic profile:', profile); // Debug log
           }
 
           // Fetch user sessions
@@ -105,7 +134,7 @@ export function useAuth() {
           console.error('Error fetching user profile:', error);
           // Fallback to basic profile
           const basicProfile: UserProfile = {
-            name: user.displayName || user.email?.split('@')[0] || 'User',
+            name: user.displayName || 'User',
             email: user.email || '',
             photo: user.photoURL || undefined,
             stats: getDefaultStats(),
@@ -124,7 +153,7 @@ export function useAuth() {
     return () => unsubscribe();
   }, []);
 
-  return { user, userProfile, loading };
+  return { user, userProfile, loading, refreshProfile };
 }
 
 async function createSampleSessions(userId: string): Promise<UserSession[]> {

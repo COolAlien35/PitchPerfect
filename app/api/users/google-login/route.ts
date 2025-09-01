@@ -32,9 +32,13 @@ export async function POST(req: NextRequest) {
       await setDoc(userRef, newUser);
       user = newUser;
     } else if (!user.googleId) {
-      // Update existing user if googleId is missing
-      await setDoc(userRef, { googleId, photo: picture }, { merge: true });
-      user = { ...user, googleId, photo: picture };
+      // Update existing user if googleId is missing, but preserve existing name if set
+      const updateData: any = { googleId, photo: picture };
+      if (!user.name) {
+        updateData.name = name; // Only set name if user doesn't have one
+      }
+      await setDoc(userRef, updateData, { merge: true });
+      user = { ...user, ...updateData };
     }
 
     const token = jwt.sign({ id: uid, email: user.email }, "9b68f9e05278a077f736cb566186c7437d9afd075e5c8c3170ead132bb4a77e3", { expiresIn: '2d' });
