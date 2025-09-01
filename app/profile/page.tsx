@@ -1,94 +1,41 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { auth } from "@/src/firebase"
-import { onAuthStateChanged } from "firebase/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, User as UserIcon, Mail, Link as LinkIcon, FileText, Briefcase } from "lucide-react"
 import Image from "next/image"
-
-interface UserProfile {
-  name?: string;
-  email: string;
-  photo?: string;
-  linkedinUrl?: string;
-  resumeDriveUrl?: string;
-  roles?: string[];
-}
+import { useAuth } from "@/hooks/use-auth"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const idToken = await user.getIdToken();
-          const res = await fetch("/api/users/profile", {
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-            },
-          });
-
-          if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || "Failed to fetch user profile");
-          }
-
-          const data: UserProfile = await res.json();
-          setUserProfile(data);
-        } catch (err: any) {
-          console.error("Error fetching profile:", err);
-          setError(err.message);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        router.push("/login") // Redirect to login if not authenticated
-      }
-    })
-
-    return () => unsubscribe()
-  }, [router])
+  const { user, userProfile, loading } = useAuth()
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <p>Loading profile...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <p className="text-red-600">Error: {error}</p>
-      </div>
-    )
-  }
-
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <p>No user information available.</p>
-      </div>
-    )
+  if (!user || !userProfile) {
+    router.push("/login")
+    return null
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-background flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
-        <Card className="border-2">
+        <Card className="border-border/50 bg-card/60 backdrop-blur-sm shadow-lg">
           <CardHeader>
-            <Button variant="ghost" size="icon" onClick={() => router.back()} className="absolute top-4 left-4">
+            <Button variant="ghost" size="icon" onClick={() => router.back()} className="absolute top-4 left-4 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <CardTitle className="text-2xl text-center flex items-center justify-center">
+            <CardTitle className="text-2xl text-center flex items-center justify-center text-foreground">
               <UserIcon className="mr-2 h-6 w-6" />
               User Profile
             </CardTitle>
@@ -108,30 +55,30 @@ export default function ProfilePage() {
             {userProfile.name && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <UserIcon className="h-5 w-5 text-gray-600" />
-                  <p className="text-lg font-medium">Name:</p>
+                  <UserIcon className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-lg font-medium text-foreground">Name:</p>
                 </div>
-                <p className="text-gray-800 ml-7">{userProfile.name}</p>
+                <p className="text-muted-foreground ml-7">{userProfile.name}</p>
               </div>
             )}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-gray-600" />
-                <p className="text-lg font-medium">Email:</p>
+                <Mail className="h-5 w-5 text-muted-foreground" />
+                <p className="text-lg font-medium text-foreground">Email:</p>
               </div>
-              <p className="text-gray-800 ml-7">{userProfile.email}</p>
+              <p className="text-muted-foreground ml-7">{userProfile.email}</p>
             </div>
             {userProfile.linkedinUrl && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <LinkIcon className="h-5 w-5 text-gray-600" />
-                  <p className="text-lg font-medium">LinkedIn:</p>
+                  <LinkIcon className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-lg font-medium text-foreground">LinkedIn:</p>
                 </div>
                 <a
                   href={userProfile.linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline ml-7"
+                  className="text-primary hover:underline ml-7"
                 >
                   {userProfile.linkedinUrl}
                 </a>
@@ -140,14 +87,14 @@ export default function ProfilePage() {
             {userProfile.resumeDriveUrl && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 text-gray-600" />
-                  <p className="text-lg font-medium">Resume:</p>
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-lg font-medium text-foreground">Resume:</p>
                 </div>
                 <a
                   href={userProfile.resumeDriveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline ml-7"
+                  className="text-primary hover:underline ml-7"
                 >
                   View Resume
                 </a>
@@ -156,10 +103,10 @@ export default function ProfilePage() {
             {userProfile.roles && userProfile.roles.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Briefcase className="h-5 w-5 text-gray-600" />
-                  <p className="text-lg font-medium">Roles:</p>
+                  <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-lg font-medium text-foreground">Roles:</p>
                 </div>
-                <p className="text-gray-800 ml-7">{userProfile.roles.join(", ")}</p>
+                <p className="text-muted-foreground ml-7">{userProfile.roles.join(", ")}</p>
               </div>
             )}
           </CardContent>

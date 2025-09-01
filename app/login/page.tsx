@@ -1,6 +1,7 @@
 "use client"
 
-import { auth, provider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "../../src/firebase";
+import { auth, provider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, db } from "../../src/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 import type React from "react"
 
@@ -37,7 +38,19 @@ export default function LoginPage() {
     e.preventDefault()
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Create user profile in Firestore
+        if (result.user) {
+          const userRef = doc(db, 'users', result.user.uid);
+          await setDoc(userRef, {
+            name: email.split('@')[0], // Use email prefix as default name
+            email: email,
+            createdAt: new Date().toISOString(),
+            roles: ['user'],
+          });
+        }
+        
         router.push("/onboarding");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
