@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,21 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState<any>({})
   const [isSaving, setIsSaving] = useState(false)
 
+  // Refresh profile data when component mounts
+  useEffect(() => {
+    if (user && !loading) {
+      refreshProfile()
+    }
+  }, [user, loading, refreshProfile])
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Profile Page - User:', user)
+    console.log('Profile Page - UserProfile:', userProfile)
+    console.log('Profile Page - Loading:', loading)
+    console.log('Profile Page - UserProfile Keys:', userProfile ? Object.keys(userProfile) : 'No profile')
+  }, [user, userProfile, loading])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-background">
@@ -56,6 +71,16 @@ export default function ProfilePage() {
     router.push("/login")
     return null
   }
+
+  // Debug: Log the profile data to see what we have
+  console.log('Profile data loaded:', {
+    name: userProfile.name,
+    email: userProfile.email,
+    hasName: !!userProfile.name,
+    nameLength: userProfile.name?.length,
+    isUser: userProfile.name === 'User',
+    allKeys: Object.keys(userProfile)
+  })
 
   const getExperienceLabel = (experience: string) => {
     switch (experience) {
@@ -102,7 +127,7 @@ export default function ProfilePage() {
   ]
 
   const handleEdit = () => {
-    setEditData({
+    const editDataToSet = {
       name: userProfile.name || '',
       phone: userProfile.phone || '',
       bio: userProfile.bio || '',
@@ -115,7 +140,9 @@ export default function ProfilePage() {
       goals: userProfile.goals || [],
       linkedinUrl: userProfile.linkedinUrl || '',
       githubUrl: userProfile.githubUrl || '',
-    })
+    }
+    console.log('Setting edit data:', editDataToSet)
+    setEditData(editDataToSet)
     setIsEditing(true)
   }
 
@@ -130,17 +157,27 @@ export default function ProfilePage() {
     setIsSaving(true)
     try {
       const userRef = doc(db, 'users', user.uid)
-      await updateDoc(userRef, {
+      const updateData = {
         ...editData,
         updatedAt: new Date().toISOString()
-      })
+      }
+      
+      console.log("Updating user profile:", updateData); // Debug log
+      await updateDoc(userRef, updateData)
+      console.log("Profile updated successfully!"); // Debug log
+      
+      // Small delay to ensure data is saved
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Refresh the profile data
       await refreshProfile()
       setIsEditing(false)
+      
+      // Show success message
+      alert('Profile updated successfully!')
     } catch (error) {
       console.error('Error updating profile:', error)
-      alert('Failed to update profile. Please try again.')
+      alert(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`)
     } finally {
       setIsSaving(false)
     }
@@ -252,9 +289,14 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-3xl font-bold text-foreground mb-2">{userProfile.name}</h1>
+                    <h1 className="text-3xl font-bold text-foreground mb-2">
+                      {userProfile.name || 'User'}
+                    </h1>
                     {userProfile.bio && (
                       <p className="text-muted-foreground text-lg mb-4">{userProfile.bio}</p>
+                    )}
+                    {!userProfile.bio && (
+                      <p className="text-muted-foreground text-lg mb-4">No bio added yet</p>
                     )}
                   </>
                 )}
@@ -490,6 +532,15 @@ export default function ProfilePage() {
                             <p className="text-sm font-medium text-muted-foreground">Education</p>
                             <p className="text-foreground">{userProfile.education}</p>
                           </div>
+                        </div>
+                      )}
+                      {!userProfile.company && !userProfile.education && (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                            <Briefcase className="w-8 h-8 text-muted-foreground" />
+                          </div>
+                          <p className="text-muted-foreground mb-2">No professional background added yet</p>
+                          <p className="text-sm text-muted-foreground">Click "Edit Profile" to add your work experience and education</p>
                         </div>
                       )}
                     </>

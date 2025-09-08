@@ -79,7 +79,7 @@ export default function OnboardingPage() {
         setIsSubmitting(true)
         try {
           const userDocRef = doc(db, "users", userId);
-          await setDoc(userDocRef, {
+          const userData = {
             name: formData.name,
             email: formData.email,
             phone: formData.phone,
@@ -94,12 +94,20 @@ export default function OnboardingPage() {
             githubUrl: formData.githubUrl,
             bio: formData.bio,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             // resume will be handled later
-          }, { merge: true });
+          };
+          
+          console.log("Saving user data to Firestore:", userData); // Debug log
+          await setDoc(userDocRef, userData, { merge: true });
+          console.log("User data saved successfully!"); // Debug log
+          
+          // Show success message
+          alert("Profile created successfully! Welcome to PitchPerfect!");
           router.push("/dashboard");
         } catch (error) {
           console.error("Error saving onboarding data:", error);
-          alert("Failed to save onboarding data. Please try again.");
+          alert(`Failed to save onboarding data: ${error.message}. Please try again.`);
         } finally {
           setIsSubmitting(false)
         }

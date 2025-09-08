@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from '@/src/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs, setDoc, addDoc } from 'firebase/firestore';
@@ -65,14 +65,48 @@ export function useAuth() {
     if (!user) return;
     
     try {
+      // Fetch user profile from Firestore
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       
+      let profile: UserProfile;
+      
       if (userSnap.exists()) {
-        const profile = userSnap.data() as UserProfile;
-        setUserProfile(profile);
-        console.log('Refreshed profile:', profile); // Debug log
+        profile = userSnap.data() as UserProfile;
+        console.log('Refreshed profile from Firestore:', profile); // Debug log
+      } else {
+        // If no profile exists, create a basic one from auth user
+        profile = {
+          name: user.displayName || 'User',
+          email: user.email || '',
+          photo: user.photoURL || undefined,
+        };
+        console.log('Created basic profile during refresh:', profile); // Debug log
       }
+
+      // Fetch user sessions
+      const sessionsRef = collection(db, 'users', user.uid, 'sessions');
+      const sessionsQuery = query(sessionsRef, orderBy('date', 'desc'), limit(5));
+      const sessionsSnap = await getDocs(sessionsQuery);
+      
+      let sessions: UserSession[] = sessionsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as UserSession));
+
+      // Calculate stats from sessions
+      const stats: UserStats = calculateUserStats(sessions);
+      
+      // Generate badges based on user performance
+      const badges: UserBadge[] = generateUserBadges(stats, sessions);
+      
+      // Update profile with fetched data
+      profile.sessions = sessions;
+      profile.stats = stats;
+      profile.badges = badges;
+      
+      setUserProfile(profile);
+      console.log('Refreshed profile with complete data:', profile); // Debug log
     } catch (error) {
       console.error('Error refreshing profile:', error);
     }
@@ -153,7 +187,7 @@ export function useAuth() {
     return () => unsubscribe();
   }, []);
 
-  return { user, userProfile, loading, refreshProfile };
+  return { user, userProfile, loading, refreshProfile: useCallback(refreshProfile, [user]) };
 }
 
 async function createSampleSessions(userId: string): Promise<UserSession[]> {
