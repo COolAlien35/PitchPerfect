@@ -12,14 +12,14 @@ const RealTimeAnalysis: React.FC<RealTimeAnalysisProps> = ({ onAnalysis }) => {
 
     useEffect(() => {
         // Connect to the Socket.IO server
-        socketRef.current = io('http://localhost:3000');
+        socketRef.current = io('http://localhost:3000', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 5 });
 
         socketRef.current.on('analysis-result', (data) => {
             onAnalysis(data); // Pass analysis data to parent
         });
 
         socketRef.current.on('analysis-error', (data) => {
-            console.error('Analysis Error:', data.error);
+            console.error('Analysis Error:', data?.error || 'Unknown error');
         });
 
         // Send a frame for analysis every 2 seconds
@@ -27,7 +27,11 @@ const RealTimeAnalysis: React.FC<RealTimeAnalysisProps> = ({ onAnalysis }) => {
             if (webcamRef.current) {
                 const imageSrc = webcamRef.current.getScreenshot();
                 if (imageSrc) {
-                    socketRef.current?.emit('video-frame', imageSrc);
+                    try {
+                        socketRef.current?.emit('video-frame', imageSrc);
+                    } catch (e) {
+                        console.error('Failed to emit frame:', e);
+                    }
                 }
             }
         }, 2000);

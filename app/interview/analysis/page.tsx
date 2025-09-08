@@ -35,6 +35,9 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/hooks/use-auth"
+import { db } from "@/src/firebase"
+import { addDoc, collection } from "firebase/firestore"
 import {
   LineChart,
   Line,
@@ -55,9 +58,11 @@ import {
 } from "recharts"
 
 export default function InterviewAnalysisPage() {
+  const { user } = useAuth()
   const [sessionData, setSessionData] = useState<any>(null)
   const [overallScore, setOverallScore] = useState(8.2)
   const [calculatedScores, setCalculatedScores] = useState<any>(null)
+  const [saved, setSaved] = useState(false)
 
   // Calculate scores based on real data
   const calculateScores = (data: any) => {
@@ -282,6 +287,39 @@ export default function InterviewAnalysisPage() {
       })
     }
   }, [])
+
+  // Persist summarized session to Firestore once
+  useEffect(() => {
+    const persist = async () => {
+      try {
+        if (!user || !sessionData) return
+        if (saved) return
+
+        const alreadySaved = localStorage.getItem("lastInterviewSession:saved")
+        // Use sessionStartTime as idempotency key
+        if (alreadySaved === String(sessionData.sessionStartTime)) return
+
+        const durationSeconds = Number(sessionData.sessionTime || 0)
+        const minutes = Math.max(1, Math.round(durationSeconds / 60))
+
+        const docData = {
+          type: sessionData.type || "Interview",
+          score: Number(overallScore) || 0,
+          date: new Date().toISOString(),
+          duration: `${minutes} min`,
+          category: (sessionData.type || '').toLowerCase().includes('technical') ? 'technical' : 'behavioral',
+        }
+
+        await addDoc(collection(db, 'users', user.uid, 'sessions'), docData)
+        localStorage.setItem("lastInterviewSession:saved", String(sessionData.sessionStartTime || Date.now()))
+        setSaved(true)
+      } catch (e) {
+        console.error('Failed to save session result:', e)
+      }
+    }
+
+    persist()
+  }, [user, sessionData, overallScore, saved])
 
   // Helper function to get ideal answers
   const getIdealAnswer = (question: string) => {

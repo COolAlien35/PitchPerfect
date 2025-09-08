@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,8 +27,19 @@ import RealTimeAnalysis from "@/components/real-time-analysis";
 import VoiceAnalysis from "@/components/voice-analysis";
 import { AIAvatar3D } from "@/components/3d-ai-avatar";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+
+// Fallback questions kept outside render to avoid new references every render
+const FALLBACK_BEHAVIORAL_QUESTIONS = [
+  "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
+  "Describe a situation where you had to meet a tight deadline. What was your approach?",
+  "Can you give me an example of a time when you had to adapt to a significant change at work?",
+  "Tell me about a project you're particularly proud of. What made it successful?",
+  "Describe a time when you had to give constructive feedback to a colleague.",
+]
 
 export default function BehavioralInterviewPage() {
+  const { userProfile } = useAuth()
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [sessionTime, setSessionTime] = useState(0)
   const [confidenceScore, setConfidenceScore] = useState(75)
@@ -65,24 +76,52 @@ export default function BehavioralInterviewPage() {
   const [isTechnicalInterview, setIsTechnicalInterview] = useState(false)
   const [technicalInterviewData, setTechnicalInterviewData] = useState<any>(null)
 
-  // Default behavioral questions
-  const defaultQuestions = [
-    "Tell me about a time when you had to work with a difficult team member. How did you handle the situation?",
-    "Describe a situation where you had to meet a tight deadline. What was your approach?",
-    "Can you give me an example of a time when you had to adapt to a significant change at work?",
-    "Tell me about a project you're particularly proud of. What made it successful?",
-    "Describe a time when you had to give constructive feedback to a colleague.",
-  ]
+  // Server-generated behavioral questions
+  const [behavioralQuestions, setBehavioralQuestions] = useState<string[] | null>(null)
+  const hasFetchedQuestionsRef = useRef(false)
+
+  // Fetch dynamic questions from the server (Gemini)
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const payload: any = {
+          industry: userProfile?.industry,
+          role: userProfile?.targetRole,
+          experienceLevel: userProfile?.experience,
+          skills: userProfile?.skills || [],
+        }
+
+        const res = await fetch('/api/generate-behavioral-questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+
+        if (!res.ok) throw new Error('Failed to fetch behavioral questions')
+        const data = await res.json()
+        if (Array.isArray(data?.questions) && data.questions.length > 0) {
+          setBehavioralQuestions(data.questions)
+        }
+      } catch (err) {
+        console.warn('Using fallback behavioral questions due to error:', err)
+        setBehavioralQuestions([...FALLBACK_BEHAVIORAL_QUESTIONS].sort(() => Math.random() - 0.5))
+      }
+    }
+
+    // Only fetch for behavioral mode
+    if (!isTechnicalInterview && !hasFetchedQuestionsRef.current) {
+      hasFetchedQuestionsRef.current = true
+      fetchQuestions()
+    }
+  }, [isTechnicalInterview, userProfile?.industry, userProfile?.targetRole, userProfile?.experience])
 
   // Get questions based on interview type
-  const getQuestions = () => {
+  const questions = useMemo(() => {
     if (isTechnicalInterview && technicalInterviewData?.questions) {
-      return technicalInterviewData.questions
+      return technicalInterviewData.questions as string[]
     }
-    return defaultQuestions
-  }
-
-  const questions = getQuestions()
+    return behavioralQuestions || FALLBACK_BEHAVIORAL_QUESTIONS
+  }, [isTechnicalInterview, technicalInterviewData?.questions, behavioralQuestions])
 
   const getInterviewerPersonality = () => {
     if (isTechnicalInterview) {
