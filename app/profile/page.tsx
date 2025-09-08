@@ -257,7 +257,7 @@ export default function ProfilePage() {
                     className="rounded-full object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
-                  <div className="w-30 h-30 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                  <div className="w-28 h-28 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg ring-2 ring-white/40">
                     {userProfile.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                 )}
@@ -731,32 +731,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Account Info */}
-            <Card className="border-border/50 bg-card/60 backdrop-blur-sm shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg text-foreground">Account Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">User ID</span>
-                  <span className="text-xs font-mono text-foreground">
-                    {user.uid.slice(0, 8)}...
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Roles</span>
-                  <div className="flex gap-1">
-                    {userProfile.roles?.map((role, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {role}
-                      </Badge>
-                    )) || (
-                      <Badge variant="outline" className="text-xs">User</Badge>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            
           </div>
         </div>
       </div>
