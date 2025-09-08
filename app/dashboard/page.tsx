@@ -148,21 +148,36 @@ export default function DashboardPage() {
               <Calendar className="mr-2 h-4 w-4" />
               Schedule
             </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-accent">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={() => router.push('/analytics')}
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
             </Button>
           </nav>
 
-          {/* Mobile Schedule Button */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="md:hidden text-muted-foreground hover:text-foreground hover:bg-accent"
-            onClick={() => router.push('/schedule')}
-          >
-            <Calendar className="h-4 w-4" />
-          </Button>
+          {/* Mobile Navigation Buttons */}
+          <div className="md:hidden flex items-center space-x-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={() => router.push('/schedule')}
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={() => router.push('/analytics')}
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
