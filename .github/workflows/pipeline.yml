@@ -1,0 +1,196 @@
+name: PitchPerfect CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY:        ghcr.io
+  IMAGE_BASE:      ghcr.io/${{ github.repository }}
+  PYTHON_VERSION:  "3.12"
+  NODE_VERSION:    "22"
+
+# ====================================================================
+# CI – Lint, Type-check, Test (runs on every push/PR)
+# ====================================================================
+jobs:
+  # ------------------------------------------------------------------
+  # Backend CI
+  # ------------------------------------------------------------------
+  ci-backend:
+    name: Backend – Lint, Type-check, Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Mypy type-check
+        run: mypy app --ignore-missing-imports --strict
+
+      - name: Pytest
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          REDIS_URL:    redis://localhost:6379/0
+          SECRET_KEY:   test-secret-key-ci
+          GEMINI_API_KEY: dummy
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=xml \
+            --cov-fail-under=70 \
+            -q
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage.xml
+          flags: backend
+
+  # ------------------------------------------------------------------
+  # Frontend CI
+  # ------------------------------------------------------------------
+  ci-frontend:
+    name: Frontend – Lint, Type-check, Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Jest unit tests
+        run: npm test -- --ci --coverage --watchAll=false
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          files: frontend/coverage/lcov.info
+          flags: frontend
+
+# ====================================================================
+# CD – Docker build + push + deploy  (main branch only)
+# ====================================================================
+  cd-deploy:
+    name: Build → Push → Deploy
+    needs: [ci-backend, ci-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write    # required to push to GHCR
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: meta
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # Docker Buildx for multi-platform (ARM64 + AMD64)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- Backend image ----
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context:   ./backend
+          file:      ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push:      true
+          tags: |
+            ${{ env.IMAGE_BASE }}/backend:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_BASE }}/backend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ---- Frontend image ----
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context:   ./frontend
+          file:      ./frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push:      true
+          tags: |
+            ${{ env.IMAGE_BASE }}/frontend:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE_BASE }}/frontend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ---- SSH deploy ----
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key:      ${{ secrets.DEPLOY_SSH_KEY }}
+          port:     ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd /opt/pitchperfect
+
+            # Pull latest images
+            IMAGE_TAG=${{ steps.meta.outputs.tag }} \
+            GITHUB_REPOSITORY=${{ github.repository }} \
+            docker compose -f docker-compose.prod.yml pull
+
+            # Rolling update with zero-downtime
+            IMAGE_TAG=${{ steps.meta.outputs.tag }} \
+            GITHUB_REPOSITORY=${{ github.repository }} \
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Prune old images
+            docker image prune -f --filter "until=24h"
