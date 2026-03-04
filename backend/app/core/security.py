@@ -13,7 +13,7 @@ from jwt.exceptions import (
     InvalidIssuerError,
     InvalidTokenError,
 )
-from passlib.context import CryptContext
+
 from pydantic import BaseModel, Field
 
 from ..infrastructure.redis_manager import redis_manager
@@ -50,17 +50,17 @@ class TokenPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Password hashing (bcrypt via passlib)
+# Password hashing (bcrypt – direct, no passlib needed)
 # ---------------------------------------------------------------------------
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt as _bcrypt
 
 
 def hash_password(plain: str) -> str:
-    return _pwd_context.hash(plain)
+    return _bcrypt.hashpw(plain.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    return _bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ---------------------------------------------------------------------------

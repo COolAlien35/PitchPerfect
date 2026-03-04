@@ -11,7 +11,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.security import OAuth2PasswordRequestForm
+
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +32,7 @@ from ...core.security import (
 )
 from ...models.user import User
 from ...repositories.user_repo import UserRepository
-from ..dependencies import get_db
+from ..dependencies import get_db, CurrentUser
 
 logger = logging.getLogger("pitchperfect.auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
@@ -46,16 +46,32 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=1, max_length=255)
+    username: str | None = None
 
 
 class RegisterResponse(BaseModel):
     id: str
     email: str
     full_name: str
+    username: str | None = None
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class LoginResponse(TokenPair):
     pass
+
+
+class MeResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str | None
+    username: str | None
+    is_active: bool
+    created_at: str
 
 
 class RefreshResponse(TokenPair):
@@ -124,11 +140,12 @@ async def register(body: RegisterRequest, db: DB) -> RegisterResponse:
         "email":           body.email,
         "hashed_password": hash_password(body.password),
         "full_name":       body.full_name,
+        "username":        body.username,
     })
     await db.commit()
 
     logger.info("User registered", extra={"user_id": str(user.id), "email": body.email})
-    return RegisterResponse(id=str(user.id), email=user.email, full_name=user.full_name)
+    return RegisterResponse(id=str(user.id), email=user.email, full_name=user.full_name, username=user.username)
 
 
 # ---------------------------------------------------------------------------
@@ -140,14 +157,14 @@ async def register(body: RegisterRequest, db: DB) -> RegisterResponse:
     summary="Authenticate and receive an access/refresh token pair.",
 )
 async def login(
+    body: LoginRequest,
     response: Response,
-    form: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DB,
 ) -> LoginResponse:
     repo = UserRepository(db)
-    user = await repo.get_by_email(email=form.username)
+    user = await repo.get_by_email(email=body.email)
 
-    if not user or not verify_password(form.password, user.hashed_password):
+    if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "INVALID_CREDENTIALS", "message": "Incorrect email or password."},
@@ -254,3 +271,22 @@ async def logout(
     _clear_refresh_cookie(response)
     logger.info("User logged out")
     return LogoutResponse()
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/auth/me
+# ---------------------------------------------------------------------------
+@router.get(
+    "/me",
+    response_model=MeResponse,
+    summary="Return the currently authenticated user.",
+)
+async def me(current_user: CurrentUser) -> MeResponse:
+    return MeResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        full_name=current_user.full_name,
+        username=current_user.username,
+        is_active=current_user.is_active,
+        created_at=current_user.created_at.isoformat(),
+    )

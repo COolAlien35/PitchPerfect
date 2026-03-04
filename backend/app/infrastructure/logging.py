@@ -133,30 +133,23 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         logger = get_logger("pitchperfect.request")
         start = time.perf_counter()
 
-        try:
-            response: Response = await call_next(request)
-        except Exception:
-            logger.exception(
-                "Unhandled exception",
-                extra={"method": request.method, "path": request.url.path},
-            )
-            raise
-        finally:
-            duration_ms = round((time.perf_counter() - start) * 1_000, 2)
-            logger.info(
-                "HTTP %s %s → %s  %.2fms",
-                request.method,
-                mask_sensitive(str(request.url.path)),
-                response.status_code if "response" in dir() else "ERR",
-                duration_ms,
-                extra={
-                    "method":      request.method,
-                    "path":        request.url.path,
-                    "status_code": getattr(response, "status_code", None),
-                    "duration_ms": duration_ms,
-                },
-            )
-            _request_id_ctx.reset(token)
+        response = await call_next(request)
+
+        duration_ms = round((time.perf_counter() - start) * 1_000, 2)
+        logger.info(
+            "HTTP %s %s → %s  %.2fms",
+            request.method,
+            mask_sensitive(str(request.url.path)),
+            response.status_code,
+            duration_ms,
+            extra={
+                "method":      request.method,
+                "path":        request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": duration_ms,
+            },
+        )
+        _request_id_ctx.reset(token)
 
         response.headers["X-Request-ID"] = request_id
         return response

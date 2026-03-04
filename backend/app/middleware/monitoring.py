@@ -144,20 +144,16 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         method = request.method
         start  = time.perf_counter()
 
-        try:
-            response: Response = await call_next(request)
-            status_code = str(response.status_code)
-        except Exception:
-            status_code = "500"
-            error_total.labels(category="unhandled_exception").inc()
-            raise
-        finally:
-            duration = time.perf_counter() - start
-            http_request_duration_seconds.labels(
-                method=method, path=path, status_code=status_code
-            ).observe(duration)
-            http_requests_total.labels(
-                method=method, path=path, status_code=status_code
-            ).inc()
+        response = await call_next(request)
+
+        duration = time.perf_counter() - start
+        status_code = str(response.status_code)
+
+        http_request_duration_seconds.labels(
+            method=method, path=path, status_code=status_code
+        ).observe(duration)
+        http_requests_total.labels(
+            method=method, path=path, status_code=status_code
+        ).inc()
 
         return response
