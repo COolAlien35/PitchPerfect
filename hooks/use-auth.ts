@@ -1,7 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { auth, db } from '@/src/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, collection, query, orderBy, limit, getDocs, setDoc, addDoc } from 'firebase/firestore';
+
+// ---------------------------------------------------------------------------
+// API base URL – FastAPI backend
+// ---------------------------------------------------------------------------
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface AuthUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  username: string | null;
+  is_active: boolean;
+  created_at: string;
+}
 
 interface UserSession {
   id: string;
@@ -36,7 +50,6 @@ interface UserProfile {
   name: string;
   email: string;
   photo?: string;
-  googleId?: string;
   roles?: string[];
   createdAt?: string;
   linkedinUrl?: string;
@@ -56,312 +69,149 @@ interface UserProfile {
   badges?: UserBadge[];
 }
 
+// ---------------------------------------------------------------------------
+// Token helpers
+// ---------------------------------------------------------------------------
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('pp_access_token');
+}
+
+function setToken(token: string): void {
+  localStorage.setItem('pp_access_token', token);
+}
+
+function clearToken(): void {
+  localStorage.removeItem('pp_access_token');
+}
+
+async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(`${API_BASE}${path}`, { ...options, headers });
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = async () => {
-    if (!user) return;
-    
-    try {
-      // Fetch user profile from Firestore
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      let profile: UserProfile;
-      
-      if (userSnap.exists()) {
-        profile = userSnap.data() as UserProfile;
-        console.log('Refreshed profile from Firestore:', profile); // Debug log
-      } else {
-        // If no profile exists, create a basic one from auth user
-        profile = {
-          name: user.displayName || 'User',
-          email: user.email || '',
-          photo: user.photoURL || undefined,
-        };
-        console.log('Created basic profile during refresh:', profile); // Debug log
-      }
-
-      // Fetch user sessions
-      const sessionsRef = collection(db, 'users', user.uid, 'sessions');
-      const sessionsQuery = query(sessionsRef, orderBy('date', 'desc'), limit(5));
-      const sessionsSnap = await getDocs(sessionsQuery);
-      
-      let sessions: UserSession[] = sessionsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as UserSession));
-
-      // Calculate stats from sessions
-      const stats: UserStats = calculateUserStats(sessions);
-      
-      // Generate badges based on user performance
-      const badges: UserBadge[] = generateUserBadges(stats, sessions);
-      
-      // Update profile with fetched data
-      profile.sessions = sessions;
-      profile.stats = stats;
-      profile.badges = badges;
-      
-      setUserProfile(profile);
-      console.log('Refreshed profile with complete data:', profile); // Debug log
-    } catch (error) {
-      console.error('Error refreshing profile:', error);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        try {
-          // Fetch user profile from Firestore
-          const userRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          let profile: UserProfile;
-          
-          if (userSnap.exists()) {
-            profile = userSnap.data() as UserProfile;
-            console.log('Loaded existing profile:', profile); // Debug log
-          } else {
-            // If no profile exists, create a basic one from auth user
-            profile = {
-              name: user.displayName || 'User',
-              email: user.email || '',
-              photo: user.photoURL || undefined,
-            };
-            console.log('Created basic profile:', profile); // Debug log
-          }
-
-          // Fetch user sessions
-          const sessionsRef = collection(db, 'users', user.uid, 'sessions');
-          const sessionsQuery = query(sessionsRef, orderBy('date', 'desc'), limit(5));
-          const sessionsSnap = await getDocs(sessionsQuery);
-          
-          let sessions: UserSession[] = sessionsSnap.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as UserSession));
-
-          // If no sessions exist and this is a new user, create sample data
-          if (sessions.length === 0 && !userSnap.exists()) {
-            sessions = await createSampleSessions(user.uid);
-          }
-
-          // Calculate stats from sessions
-          const stats: UserStats = calculateUserStats(sessions);
-          
-          // Generate badges based on user performance
-          const badges: UserBadge[] = generateUserBadges(stats, sessions);
-          
-          // Update profile with fetched data
-          profile.sessions = sessions;
-          profile.stats = stats;
-          profile.badges = badges;
-          
-          setUserProfile(profile);
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          // Fallback to basic profile
-          const basicProfile: UserProfile = {
-            name: user.displayName || 'User',
-            email: user.email || '',
-            photo: user.photoURL || undefined,
-            stats: getDefaultStats(),
-            badges: getDefaultBadges(),
-            sessions: []
-          };
-          setUserProfile(basicProfile);
-        }
-      } else {
-        setUserProfile(null);
-      }
-      
+  // Fetch current user from /auth/me
+  const loadUser = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setUser(null);
+      setUserProfile(null);
       setLoading(false);
-    });
+      return;
+    }
 
-    return () => unsubscribe();
+    try {
+      const res = await apiFetch('/api/v1/auth/me');
+      if (!res.ok) {
+        // Token invalid or expired
+        clearToken();
+        setUser(null);
+        setUserProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      const data: AuthUser = await res.json();
+      setUser(data);
+
+      // Build profile from auth user data
+      const stats = getDefaultStats();
+      const badges = getDefaultBadges();
+
+      const profile: UserProfile = {
+        name: data.full_name || data.username || 'User',
+        email: data.email,
+        createdAt: data.created_at,
+        stats,
+        badges,
+        sessions: [],
+      };
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error loading user:', error);
+      clearToken();
+      setUser(null);
+      setUserProfile(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { user, userProfile, loading, refreshProfile: useCallback(refreshProfile, [user]) };
-}
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
-async function createSampleSessions(userId: string): Promise<UserSession[]> {
-  const sampleSessions: Omit<UserSession, 'id'>[] = [
-    {
-      type: "Technical Interview",
-      score: 8.2,
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: "25 min",
-      category: "technical"
-    },
-    {
-      type: "Behavioral Questions",
-      score: 7.5,
-      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: "30 min",
-      category: "behavioral"
-    },
-    {
-      type: "Pressure Mode",
-      score: 6.8,
-      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: "20 min",
-      category: "pressure"
-    },
-    {
-      type: "Technical Interview",
-      score: 7.9,
-      date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: "28 min",
-      category: "technical"
-    },
-    {
-      type: "Behavioral Questions",
-      score: 8.1,
-      date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: "32 min",
-      category: "behavioral"
-    }
-  ];
+  // Login
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
 
-  try {
-    const sessionsRef = collection(db, 'users', userId, 'sessions');
-    const createdSessions: UserSession[] = [];
-
-    for (const session of sampleSessions) {
-      const docRef = await addDoc(sessionsRef, session);
-      createdSessions.push({
-        id: docRef.id,
-        ...session
-      });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail?.message || err.detail || 'Login failed');
     }
 
-    return createdSessions;
-  } catch (error) {
-    console.error('Error creating sample sessions:', error);
-    return [];
-  }
-}
+    const data = await res.json();
+    setToken(data.access_token);
+    await loadUser();
+  }, [loadUser]);
 
-function calculateUserStats(sessions: UserSession[]): UserStats {
-  if (sessions.length === 0) {
-    return getDefaultStats();
-  }
+  // Signup
+  const signup = useCallback(async (email: string, password: string, fullName: string) => {
+    const res = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, full_name: fullName }),
+    });
 
-  const totalSessions = sessions.length;
-  const totalScore = sessions.reduce((sum, session) => sum + session.score, 0);
-  const averageScore = Math.round((totalScore / totalSessions) * 10) / 10;
-  
-  // Calculate improvement rate (simplified)
-  const recentSessions = sessions.slice(0, 3);
-  const olderSessions = sessions.slice(-3);
-  const recentAvg = recentSessions.reduce((sum, s) => sum + s.score, 0) / recentSessions.length;
-  const olderAvg = olderSessions.reduce((sum, s) => sum + s.score, 0) / olderSessions.length;
-  const improvementRate = Math.round(((recentAvg - olderAvg) / olderAvg) * 100);
-  
-  // Calculate current streak (simplified)
-  const currentStreak = calculateCurrentStreak(sessions);
-  
-  // Calculate XP and level
-  const totalXP = sessions.reduce((sum, session) => sum + Math.floor(session.score * 10), 0);
-  const level = Math.floor(totalXP / 100) + 1;
-  
-  return {
-    totalSessions,
-    averageScore,
-    improvementRate: Math.max(0, improvementRate),
-    badgesEarned: 0, // Will be calculated in badges
-    currentStreak,
-    nextBadge: "First Steps",
-    totalXP,
-    level
-  };
-}
-
-function calculateCurrentStreak(sessions: UserSession[]): number {
-  if (sessions.length === 0) return 0;
-  
-  // Simplified streak calculation - in real app, you'd check consecutive days
-  const today = new Date();
-  const recentSessions = sessions.filter(session => {
-    const sessionDate = new Date(session.date);
-    const diffTime = Math.abs(today.getTime() - sessionDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 7; // Sessions in last 7 days
-  });
-  
-  return recentSessions.length;
-}
-
-function generateUserBadges(stats: UserStats, sessions: UserSession[]): UserBadge[] {
-  const badges: UserBadge[] = [
-    {
-      name: "First Steps",
-      icon: "🎯",
-      earned: sessions.length > 0,
-      earnedDate: sessions.length > 0 ? sessions[sessions.length - 1].date : undefined,
-      description: "Complete your first interview session",
-      requirement: "Complete 1 session"
-    },
-    {
-      name: "Confident Speaker",
-      icon: "🎤",
-      earned: sessions.length >= 3,
-      earnedDate: sessions.length >= 3 ? sessions[2].date : undefined,
-      description: "Complete 3 interview sessions",
-      requirement: "Complete 3 sessions"
-    },
-    {
-      name: "Technical Pro",
-      icon: "💻",
-      earned: sessions.filter(s => s.category === 'technical').length >= 2,
-      earnedDate: undefined,
-      description: "Complete 2 technical interview sessions",
-      requirement: "Complete 2 technical sessions"
-    },
-    {
-      name: "Pressure Warrior",
-      icon: "⚡",
-      earned: sessions.filter(s => s.category === 'pressure').length >= 2,
-      earnedDate: undefined,
-      description: "Complete 2 pressure mode sessions",
-      requirement: "Complete 2 pressure sessions"
-    },
-    {
-      name: "Storyteller",
-      icon: "📚",
-      earned: sessions.filter(s => s.category === 'behavioral').length >= 2,
-      earnedDate: undefined,
-      description: "Complete 2 behavioral interview sessions",
-      requirement: "Complete 2 behavioral sessions"
-    },
-    {
-      name: "Communication Master",
-      icon: "🗣️",
-      earned: stats.averageScore >= 8.5 && sessions.length >= 10,
-      earnedDate: undefined,
-      description: "Achieve 8.5+ average score with 10+ sessions",
-      requirement: "8.5+ avg score & 10+ sessions"
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail?.message || err.detail || 'Signup failed');
     }
-  ];
 
-  // Update stats with actual badge count
-  stats.badgesEarned = badges.filter(b => b.earned).length;
-  
-  // Find next badge to earn
-  const nextBadge = badges.find(b => !b.earned);
-  if (nextBadge) {
-    stats.nextBadge = nextBadge.name;
-  }
+    // Auto-login after signup
+    await login(email, password);
+  }, [login]);
 
-  return badges;
+  // Logout
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch('/api/v1/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore network errors on logout
+    }
+    clearToken();
+    setUser(null);
+    setUserProfile(null);
+  }, []);
+
+  // Refresh profile
+  const refreshProfile = useCallback(async () => {
+    await loadUser();
+  }, [loadUser]);
+
+  return { user, userProfile, loading, login, signup, logout, refreshProfile };
 }
 
+// ---------------------------------------------------------------------------
+// Default stats & badges (same as before)
+// ---------------------------------------------------------------------------
 function getDefaultStats(): UserStats {
   return {
     totalSessions: 0,
@@ -371,7 +221,7 @@ function getDefaultStats(): UserStats {
     currentStreak: 0,
     nextBadge: "First Steps",
     totalXP: 0,
-    level: 1
+    level: 1,
   };
 }
 
@@ -382,42 +232,42 @@ function getDefaultBadges(): UserBadge[] {
       icon: "🎯",
       earned: false,
       description: "Complete your first interview session",
-      requirement: "Complete 1 session"
+      requirement: "Complete 1 session",
     },
     {
       name: "Confident Speaker",
       icon: "🎤",
       earned: false,
       description: "Complete 3 interview sessions",
-      requirement: "Complete 3 sessions"
+      requirement: "Complete 3 sessions",
     },
     {
       name: "Technical Pro",
       icon: "💻",
       earned: false,
       description: "Complete 2 technical interview sessions",
-      requirement: "Complete 2 technical sessions"
+      requirement: "Complete 2 technical sessions",
     },
     {
       name: "Pressure Warrior",
       icon: "⚡",
       earned: false,
       description: "Complete 2 pressure mode sessions",
-      requirement: "Complete 2 pressure sessions"
+      requirement: "Complete 2 pressure sessions",
     },
     {
       name: "Storyteller",
       icon: "📚",
       earned: false,
       description: "Complete 2 behavioral interview sessions",
-      requirement: "Complete 2 behavioral sessions"
+      requirement: "Complete 2 behavioral sessions",
     },
     {
       name: "Communication Master",
       icon: "🗣️",
       earned: false,
       description: "Achieve 8.5+ average score with 10+ sessions",
-      requirement: "8.5+ avg score & 10+ sessions"
-    }
+      requirement: "8.5+ avg score & 10+ sessions",
+    },
   ];
 }

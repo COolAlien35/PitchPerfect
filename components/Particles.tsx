@@ -65,16 +65,18 @@ export default function ParticlesBackground() {
       animationFrameId = requestAnimationFrame(animate);
     }
 
+    const handleResize = () => {
+      resize();
+      createParticles();
+    };
+
     resize();
     createParticles();
     animate();
-    window.addEventListener("resize", () => {
-      resize();
-      createParticles();
-    });
+    window.addEventListener("resize", handleResize);
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 

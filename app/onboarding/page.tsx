@@ -11,9 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, ArrowRight, ArrowLeft, Brain, User, Briefcase, Target, GraduationCap, Globe, FileText, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { auth, db } from "@/src/firebase"
-import { doc, setDoc } from "firebase/firestore"
-import { onAuthStateChanged } from "firebase/auth"
+import { useAuth } from "@/hooks/use-auth"
 import ParticlesBackground from "@/components/Particles"
 
 export default function OnboardingPage() {
@@ -34,9 +32,9 @@ export default function OnboardingPage() {
     resume: null as File | null,
     bio: "",
   })
-  const [userId, setUserId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const { user, loading } = useAuth()
 
   const totalSteps = 5
   const progress = (step / totalSteps) * 100
@@ -59,26 +57,21 @@ export default function OnboardingPage() {
   ]
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid)
-        setFormData((prev) => ({ ...prev, email: user.email || "" }))
-      } else {
-        router.push("/login")
-      }
-    })
-    return () => unsubscribe()
-  }, [router])
+    if (!loading && !user) {
+      router.push("/login")
+    } else if (user) {
+      setFormData((prev) => ({ ...prev, email: user.email || "" }))
+    }
+  }, [user, loading, router])
 
   const handleNext = async () => {
     if (step < totalSteps) {
       setStep(step + 1)
     } else {
-      // Complete onboarding - Save data to Firestore
-      if (userId) {
+      // Complete onboarding - save profile data
+      if (user) {
         setIsSubmitting(true)
         try {
-          const userDocRef = doc(db, "users", userId);
           const userData = {
             name: formData.name,
             email: formData.email,
@@ -93,19 +86,13 @@ export default function OnboardingPage() {
             linkedinUrl: formData.linkedinUrl,
             githubUrl: formData.githubUrl,
             bio: formData.bio,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            // resume will be handled later
           };
-          
-          console.log("Saving user data to Firestore:", userData); // Debug log
-          await setDoc(userDocRef, userData, { merge: true });
-          console.log("User data saved successfully!"); // Debug log
-          
-          // Show success message
-          alert("Profile created successfully! Welcome to PitchPerfect!");
+
+          // TODO: Save to backend when profile endpoint is available
+          console.log("Onboarding data (will be sent to backend):", userData);
+
           router.push("/dashboard");
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error saving onboarding data:", error);
           alert(`Failed to save onboarding data: ${error.message}. Please try again.`);
         } finally {
@@ -459,8 +446,8 @@ export default function OnboardingPage() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
-                <Button 
-                  onClick={handleNext} 
+                <Button
+                  onClick={handleNext}
                   disabled={!canProceed() || isSubmitting}
                   className="flex items-center btn-gradient-primary px-8 py-3 shadow-lg hover:shadow-xl transition-all duration-300"
                 >

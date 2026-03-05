@@ -36,8 +36,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
-import { db } from "@/src/firebase"
-import { addDoc, collection } from "firebase/firestore"
 import {
   LineChart,
   Line,
@@ -122,14 +120,14 @@ export default function InterviewAnalysisPage() {
       // Score based on response quality
       responses.forEach((response: string, index: number) => {
         const wordCount = response.split(' ').length
-        const hasSTAR = response.toLowerCase().includes('situation') || 
-                       response.toLowerCase().includes('task') || 
-                       response.toLowerCase().includes('action') || 
-                       response.toLowerCase().includes('result')
-        
+        const hasSTAR = response.toLowerCase().includes('situation') ||
+          response.toLowerCase().includes('task') ||
+          response.toLowerCase().includes('action') ||
+          response.toLowerCase().includes('result')
+
         if (wordCount >= 50 && wordCount <= 200) scores.storytelling += 5
         if (hasSTAR) scores.storytelling += 10
-        
+
         if (wordCount >= 30) scores.communication += 3
         if (response.includes('led') || response.includes('managed') || response.includes('coordinated')) {
           scores.leadership += 5
@@ -178,10 +176,10 @@ export default function InterviewAnalysisPage() {
     }
 
     const wordCount = userAnswer.split(' ').length
-    const hasSTAR = userAnswer.toLowerCase().includes('situation') || 
-                   userAnswer.toLowerCase().includes('task') || 
-                   userAnswer.toLowerCase().includes('action') || 
-                   userAnswer.toLowerCase().includes('result')
+    const hasSTAR = userAnswer.toLowerCase().includes('situation') ||
+      userAnswer.toLowerCase().includes('task') ||
+      userAnswer.toLowerCase().includes('action') ||
+      userAnswer.toLowerCase().includes('result')
     const hasMetrics = /\d+%|\d+ percent|\$\d+|\d+ dollars|\d+ people|\d+ team/.test(userAnswer)
     const hasLeadership = /led|managed|coordinated|supervised|directed/.test(userAnswer.toLowerCase())
 
@@ -256,11 +254,11 @@ export default function InterviewAnalysisPage() {
     if (storedSession) {
       const data = JSON.parse(storedSession)
       setSessionData(data)
-      
+
       // Calculate scores based on real data
       const scores = calculateScores(data)
       setCalculatedScores(scores)
-      
+
       // Calculate overall score
       const overall = calculateOverallScore(scores)
       setOverallScore(overall)
@@ -288,43 +286,34 @@ export default function InterviewAnalysisPage() {
     }
   }, [])
 
-  // Persist summarized session to Firestore once
+  // Persist summarized session to localStorage
   useEffect(() => {
-    const persist = async () => {
-      try {
-        if (!user || !sessionData) return
-        if (saved) return
+    if (!user || !sessionData || saved) return
 
-        const alreadySaved = localStorage.getItem("lastInterviewSession:saved")
-        // Use sessionStartTime as idempotency key
-        if (alreadySaved === String(sessionData.sessionStartTime)) return
+    const alreadySaved = localStorage.getItem("lastInterviewSession:saved")
+    if (alreadySaved === String(sessionData.sessionStartTime)) return
 
-        const durationSeconds = Number(sessionData.sessionTime || 0)
-        const minutes = Math.max(1, Math.round(durationSeconds / 60))
+    // TODO: Save to backend when sessions endpoint is available
+    const durationSeconds = Number(sessionData.sessionTime || 0)
+    const minutes = Math.max(1, Math.round(durationSeconds / 60))
 
-        const docData = {
-          type: sessionData.type || "Interview",
-          score: Number(overallScore) || 0,
-          date: new Date().toISOString(),
-          duration: `${minutes} min`,
-          category: (sessionData.type || '').toLowerCase().includes('technical') ? 'technical' : 'behavioral',
-        }
-
-        await addDoc(collection(db, 'users', user.uid, 'sessions'), docData)
-        localStorage.setItem("lastInterviewSession:saved", String(sessionData.sessionStartTime || Date.now()))
-        setSaved(true)
-      } catch (e) {
-        console.error('Failed to save session result:', e)
-      }
+    const docData = {
+      type: sessionData.type || "Interview",
+      score: Number(overallScore) || 0,
+      date: new Date().toISOString(),
+      duration: `${minutes} min`,
+      category: (sessionData.type || '').toLowerCase().includes('technical') ? 'technical' : 'behavioral',
     }
 
-    persist()
+    console.log("Session result (will be sent to backend):", docData)
+    localStorage.setItem("lastInterviewSession:saved", String(sessionData.sessionStartTime || Date.now()))
+    setSaved(true)
   }, [user, sessionData, overallScore, saved])
 
   // Helper function to get ideal answers
   const getIdealAnswer = (question: string) => {
     const idealAnswers: { [key: string]: string } = {
-      "Tell me about your greatest professional achievement and how you overcame the challenges.": 
+      "Tell me about your greatest professional achievement and how you overcame the challenges.":
         "A strong answer should follow the STAR method (Situation, Task, Action, Result). Start with a specific situation, explain your role and the challenges, detail the actions you took, and quantify the results. Focus on leadership, problem-solving, and measurable outcomes.",
       "Describe a time when you had to work under extreme pressure. How did you handle it?":
         "Demonstrate your ability to stay calm, prioritize tasks, and make quick decisions. Show how you managed stress, communicated with stakeholders, and maintained quality under pressure. Include the outcome and what you learned.",
@@ -337,7 +326,7 @@ export default function InterviewAnalysisPage() {
       "Describe a time when you had to give constructive feedback to a colleague.":
         "Show your communication skills and emotional intelligence. Explain the situation, your approach to delivering feedback, how you ensured it was constructive, and the positive outcome."
     }
-    
+
     return idealAnswers[question] || "Provide a detailed response using the STAR method with specific examples and quantifiable results."
   }
 
@@ -357,10 +346,10 @@ export default function InterviewAnalysisPage() {
   const correctAnswers = sessionData?.questions?.map((question: string, index: number) => {
     const userAnswer = sessionData?.responses?.[index] || ""
     const analysis = generateAIAnalysis(question, userAnswer)
-    
+
     // Use ideal answers from session data if available, otherwise fall back to generated ones
     const idealAnswer = sessionData?.ideal_answers?.[index] || getIdealAnswer(question)
-    
+
     return {
       question,
       userAnswer,
@@ -480,12 +469,12 @@ export default function InterviewAnalysisPage() {
       ideal: 9.0,
     }
   }) || [
-    { question: "Q1", score: 7.5, ideal: 9.0 },
-    { question: "Q2", score: 8.2, ideal: 9.0 },
-    { question: "Q3", score: 8.0, ideal: 9.0 },
-    { question: "Q4", score: 7.8, ideal: 9.0 },
-    { question: "Q5", score: 8.5, ideal: 9.0 },
-  ]
+      { question: "Q1", score: 7.5, ideal: 9.0 },
+      { question: "Q2", score: 8.2, ideal: 9.0 },
+      { question: "Q3", score: 8.0, ideal: 9.0 },
+      { question: "Q4", score: 7.8, ideal: 9.0 },
+      { question: "Q5", score: 8.5, ideal: 9.0 },
+    ]
 
   const skillsRadarData = calculatedScores ? [
     { skill: "Communication", score: calculatedScores.communication, fullMark: 100 },
@@ -511,7 +500,7 @@ export default function InterviewAnalysisPage() {
     { session: "Current", score: 8.2 },
   ]
 
-  const timeAllocationData = sessionData?.questionStartTimes ? 
+  const timeAllocationData = sessionData?.questionStartTimes ?
     sessionData.questionStartTimes.map((startTime: number, index: number) => {
       const nextStartTime = sessionData.questionStartTimes[index + 1] || Date.now()
       const timeSpent = Math.round((nextStartTime - startTime) / 1000) // Convert to seconds
@@ -1090,7 +1079,7 @@ export default function InterviewAnalysisPage() {
                       <span className="font-medium">Speaking Pace</span>
                     </div>
                     <span className="font-bold text-blue-600">
-                      {sessionData?.voiceAnalysisHistory?.length > 0 
+                      {sessionData?.voiceAnalysisHistory?.length > 0
                         ? Math.round(sessionData.voiceAnalysisHistory.reduce((sum: number, item: any) => sum + (item.wpm || 0), 0) / sessionData.voiceAnalysisHistory.length)
                         : 145} WPM
                     </span>
@@ -1101,7 +1090,7 @@ export default function InterviewAnalysisPage() {
                       <span className="font-medium">Eye Contact</span>
                     </div>
                     <span className="font-bold text-green-600">
-                      {sessionData?.emotionHistory?.length > 0 
+                      {sessionData?.emotionHistory?.length > 0
                         ? Math.round(sessionData.emotionHistory.reduce((sum: number, item: any) => sum + (item.neutral || 0), 0) / sessionData.emotionHistory.length * 100)
                         : 82}%
                     </span>
@@ -1112,7 +1101,7 @@ export default function InterviewAnalysisPage() {
                       <span className="font-medium">Filler Words</span>
                     </div>
                     <span className="font-bold text-orange-600">
-                      {sessionData?.voiceAnalysisHistory?.length > 0 
+                      {sessionData?.voiceAnalysisHistory?.length > 0
                         ? sessionData.voiceAnalysisHistory.reduce((sum: number, item: any) => sum + (item.fillerWords || 0), 0)
                         : 8} instances
                     </span>
@@ -1123,7 +1112,7 @@ export default function InterviewAnalysisPage() {
                       <span className="font-medium">Engagement Level</span>
                     </div>
                     <span className="font-bold text-purple-600">
-                      {sessionData?.emotionHistory?.length > 0 
+                      {sessionData?.emotionHistory?.length > 0
                         ? sessionData.emotionHistory.reduce((sum: number, item: any) => sum + (item.happy || 0), 0) / sessionData.emotionHistory.length > 0.3 ? "High" : "Medium"
                         : "High"}
                     </span>

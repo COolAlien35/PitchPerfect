@@ -104,13 +104,16 @@ def create_app() -> FastAPI:
         response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"]        = "camera=(), microphone=(), geolocation=()"
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        # Build connect-src from ALLOWED_ORIGINS so the frontend can
+        # reach this API without being blocked by the browser's CSP engine.
+        _connect_origins = " ".join(ALLOWED_ORIGINS)
         response.headers["Content-Security-Policy"]   = (
             "default-src 'self'; "
             "script-src 'self'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: blob:; "
-            "connect-src 'self' wss://pitchperfect.app; "
+            f"connect-src 'self' {_connect_origins} wss://pitchperfect.app; "
             "frame-ancestors 'none';"
         )
         return response

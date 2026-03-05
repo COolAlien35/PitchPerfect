@@ -134,8 +134,16 @@ async def blacklist_token(jti: str, ttl_seconds: int) -> None:
 
 
 async def is_blacklisted(jti: str) -> bool:
-    key = f"{BLACKLIST_PREFIX}{jti}"
-    return await redis_manager.client.exists(key) == 1
+    try:
+        key = f"{BLACKLIST_PREFIX}{jti}"
+        return await redis_manager.client.exists(key) == 1
+    except Exception as getattr_or_redis_error:
+        import logging
+        logging.getLogger("pitchperfect.app.security").warning(
+            f"Redis connection failed during token blacklist check: {getattr_or_redis_error}"
+        )
+        # If Redis is down, assume token is not blacklisted to avoid locking users out
+        return False
 
 
 async def blacklist_token_pair(

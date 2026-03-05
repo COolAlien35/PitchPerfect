@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { 
+import {
   Calendar as CalendarIcon,
   Clock,
   Users,
@@ -33,8 +33,6 @@ import {
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
-import { doc, collection, addDoc, getDocs, deleteDoc, updateDoc, query, where, orderBy } from "firebase/firestore"
-import { db } from "@/src/firebase"
 
 interface ScheduledSession {
   id: string
@@ -83,7 +81,7 @@ export default function SchedulePage() {
   const [isCreating, setIsCreating] = useState(false)
   const [editingSession, setEditingSession] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>()
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   const [newSession, setNewSession] = useState({
     title: '',
@@ -97,52 +95,22 @@ export default function SchedulePage() {
     reminder: true
   })
 
-  useEffect(() => {
-    if (user && !loading) {
-      loadScheduledSessions()
-    }
-  }, [user, loading])
-
-  const loadScheduledSessions = async () => {
-    if (!user) return
-    
-    try {
-      const sessionsRef = collection(db, 'users', user.uid, 'scheduledSessions')
-      const q = query(sessionsRef, orderBy('date', 'asc'))
-      const querySnapshot = await getDocs(q)
-      
-      const sessions: ScheduledSession[] = []
-      querySnapshot.forEach((doc) => {
-        sessions.push({ id: doc.id, ...doc.data() } as ScheduledSession)
-      })
-      
-      setScheduledSessions(sessions)
-    } catch (error) {
-      console.error('Error loading scheduled sessions:', error)
-      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleCreateSession = async () => {
     if (!user || !selectedDate) return
 
     try {
-      const sessionData = {
+      const sessionData: ScheduledSession = {
+        id: crypto.randomUUID(),
         ...newSession,
         date: selectedDate.toISOString().split('T')[0],
         status: 'scheduled' as const,
         createdAt: new Date().toISOString()
       }
 
-      console.log('Creating session with data:', sessionData)
-      console.log('User ID:', user.uid)
+      // TODO: Save to backend when schedule endpoint is available
+      console.log('Creating session (will be sent to backend):', sessionData)
 
-      const sessionsRef = collection(db, 'users', user.uid, 'scheduledSessions')
-      const docRef = await addDoc(sessionsRef, sessionData)
-      
-      console.log('Session created successfully with ID:', docRef.id)
+      setScheduledSessions(prev => [...prev, sessionData])
 
       // Reset form
       setNewSession({
@@ -158,34 +126,15 @@ export default function SchedulePage() {
       })
       setSelectedDate(undefined)
       setIsCreating(false)
-      
-      // Reload sessions
-      await loadScheduledSessions()
-      
-      alert('Session scheduled successfully!')
     } catch (error) {
       console.error('Error creating session:', error)
-      console.error('Error details:', {
-        code: error instanceof Error ? error.message : 'Unknown error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      })
-      alert(`Failed to schedule session: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the console for details.`)
+      alert(`Failed to schedule session: ${error instanceof Error ? error.message : 'Unknown error'}.`)
     }
   }
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!user) return
-    
-    try {
-      const sessionRef = doc(db, 'users', user.uid, 'scheduledSessions', sessionId)
-      await deleteDoc(sessionRef)
-      await loadScheduledSessions()
-      alert('Session deleted successfully!')
-    } catch (error) {
-      console.error('Error deleting session:', error)
-      alert(`Failed to delete session: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`)
-    }
+    // TODO: Delete from backend when schedule endpoint is available
+    setScheduledSessions(prev => prev.filter(s => s.id !== sessionId))
   }
 
   const getSessionTypeInfo = (type: string) => {
@@ -203,7 +152,7 @@ export default function SchedulePage() {
 
   const getUpcomingSessions = () => {
     const today = new Date().toISOString().split('T')[0]
-    return scheduledSessions.filter(session => 
+    return scheduledSessions.filter(session =>
       session.date >= today && session.status === 'scheduled'
     ).slice(0, 3)
   }
@@ -230,9 +179,9 @@ export default function SchedulePage() {
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl shadow-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => router.back()} 
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -245,7 +194,7 @@ export default function SchedulePage() {
               Schedule Session
             </span>
           </div>
-          
+
           <Button
             onClick={() => setIsCreating(true)}
             className="btn-gradient-primary shadow-lg hover:shadow-xl transition-all duration-300"
@@ -273,7 +222,7 @@ export default function SchedulePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="border-border/50 bg-card/60 backdrop-blur-sm shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -285,7 +234,7 @@ export default function SchedulePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="border-border/50 bg-card/60 backdrop-blur-sm shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -325,7 +274,7 @@ export default function SchedulePage() {
                         className="bg-background/50 border-border"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="type" className="text-foreground font-medium">Session Type *</Label>
                       <Select
@@ -376,7 +325,7 @@ export default function SchedulePage() {
                         </PopoverContent>
                       </Popover>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="time" className="text-foreground font-medium">Time *</Label>
                       <Select
@@ -395,7 +344,7 @@ export default function SchedulePage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="duration" className="text-foreground font-medium">Duration</Label>
                       <Select
@@ -429,14 +378,14 @@ export default function SchedulePage() {
                   </div>
 
                   <div className="flex justify-end space-x-3">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setIsCreating(false)}
                       className="bg-background/50 border-border"
                     >
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleCreateSession}
                       disabled={!newSession.title || !newSession.type || !selectedDate || !newSession.time}
                       className="btn-gradient-primary"
@@ -470,7 +419,7 @@ export default function SchedulePage() {
                     {scheduledSessions.map((session) => {
                       const typeInfo = getSessionTypeInfo(session.type)
                       const IconComponent = typeInfo.icon
-                      
+
                       return (
                         <div key={session.id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:bg-accent/50 transition-colors">
                           <div className="flex items-center space-x-4">
@@ -540,7 +489,7 @@ export default function SchedulePage() {
                     {getUpcomingSessions().map((session) => {
                       const typeInfo = getSessionTypeInfo(session.type)
                       const IconComponent = typeInfo.icon
-                      
+
                       return (
                         <div key={session.id} className="flex items-center space-x-3 p-3 rounded-lg bg-accent/50">
                           <div className={`flex h-8 w-8 items-center justify-center rounded ${typeInfo.color} text-white`}>
@@ -566,24 +515,24 @@ export default function SchedulePage() {
                 <CardTitle className="text-lg text-foreground">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => setIsCreating(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Schedule Session
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => router.push('/dashboard')}
                 >
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   View Dashboard
                 </Button>
-                <Button 
-                  className="w-full justify-start" 
+                <Button
+                  className="w-full justify-start"
                   variant="outline"
                   onClick={() => router.push('/interview/behavioral')}
                 >

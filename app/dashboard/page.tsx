@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -37,8 +37,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { auth } from "@/src/firebase"
-import { signOut } from "firebase/auth"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,16 +49,11 @@ import "./dashboard.css"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, userProfile, loading } = useAuth()
-
-  // Debug logging
-  console.log('Dashboard - User:', user)
-  console.log('Dashboard - UserProfile:', userProfile)
-  console.log('Dashboard - Loading:', loading)
+  const { user, userProfile, loading, logout } = useAuth()
 
   const handleLogout = async () => {
     try {
-      await signOut(auth)
+      await logout()
       router.push("/login")
     } catch (error) {
       console.error("Error logging out:", error)
@@ -72,8 +65,15 @@ export default function DashboardPage() {
     router.push("/profile")
   }
 
-  // Show loading state
-  if (loading) {
+  // Redirect if not authenticated (must be before any conditional returns)
+  useEffect(() => {
+    if (!loading && (!user || !userProfile)) {
+      router.push("/login")
+    }
+  }, [user, userProfile, loading, router])
+
+  // Show loading state or redirect spinner
+  if (loading || !user || !userProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background via-background to-background flex items-center justify-center">
         <div className="text-center">
@@ -82,12 +82,6 @@ export default function DashboardPage() {
         </div>
       </div>
     )
-  }
-
-  // Redirect if not authenticated
-  if (!user || !userProfile) {
-    router.push("/login")
-    return null
   }
 
   const getUserInitials = (name: string) => {
@@ -118,7 +112,7 @@ export default function DashboardPage() {
   const getProgressPercentage = () => {
     if (userStats.totalSessions === 0) return 0
     if (userStats.totalSessions >= 10 && userStats.averageScore >= 8.5) return 100
-    
+
     const sessionProgress = Math.min((userStats.totalSessions / 10) * 50, 50)
     const scoreProgress = Math.min((userStats.averageScore / 8.5) * 50, 50)
     return Math.round(sessionProgress + scoreProgress)
@@ -137,20 +131,20 @@ export default function DashboardPage() {
               PitchPerfect
             </span>
           </div>
-          
+
           <nav className="hidden md:flex items-center space-x-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={() => router.push('/schedule')}
             >
               <Calendar className="mr-2 h-4 w-4" />
               Schedule
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={() => router.push('/analytics')}
             >
@@ -161,17 +155,17 @@ export default function DashboardPage() {
 
           {/* Mobile Navigation Buttons */}
           <div className="md:hidden flex items-center space-x-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={() => router.push('/schedule')}
             >
               <Calendar className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={() => router.push('/analytics')}
             >
@@ -347,7 +341,7 @@ export default function DashboardPage() {
             <Card className="border-0 bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-xl">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-xl">
-                  <Flame className="w-6 h-6 mr-3 text-orange-400" /> 
+                  <Flame className="w-6 h-6 mr-3 text-orange-400" />
                   Extreme Challenge Modes
                 </CardTitle>
                 <CardDescription className="text-slate-300">
@@ -448,8 +442,8 @@ export default function DashboardPage() {
                 <div className="rounded-xl border border-border p-4 text-center bg-accent/50">
                   <Award className="mx-auto mb-3 h-8 w-8 text-primary" />
                   <p className="font-medium text-foreground">
-                    {userStats.totalSessions === 0 
-                      ? "Start your first session to earn badges!" 
+                    {userStats.totalSessions === 0
+                      ? "Start your first session to earn badges!"
                       : `${Math.max(0, 10 - userStats.totalSessions)} more sessions to unlock!`
                     }
                   </p>
@@ -475,11 +469,10 @@ export default function DashboardPage() {
                       <Tooltip key={index}>
                         <TooltipTrigger asChild>
                           <div
-                            className={`p-4 rounded-xl text-center transition-all duration-300 cursor-pointer ${
-                              badge.earned
-                                ? "bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-amber-500/20 border-2 border-yellow-400/50 shadow-lg hover:shadow-xl hover:scale-105 badge-earned"
-                                : "bg-muted/50 border-2 border-border/50 opacity-70 hover:opacity-100 hover:scale-105"
-                            }`}
+                            className={`p-4 rounded-xl text-center transition-all duration-300 cursor-pointer ${badge.earned
+                              ? "bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-amber-500/20 border-2 border-yellow-400/50 shadow-lg hover:shadow-xl hover:scale-105 badge-earned"
+                              : "bg-muted/50 border-2 border-border/50 opacity-70 hover:opacity-100 hover:scale-105"
+                              }`}
                           >
                             <div className="text-3xl mb-2 filter drop-shadow-sm">
                               {badge.icon}
@@ -499,11 +492,10 @@ export default function DashboardPage() {
                             <p className="font-semibold mb-1">{badge.name}</p>
                             <p className="text-sm text-muted-foreground mb-2">{badge.description}</p>
                             <div className="text-xs">
-                              <span className={`px-2 py-1 rounded-full ${
-                                badge.earned 
-                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                              }`}>
+                              <span className={`px-2 py-1 rounded-full ${badge.earned
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                }`}>
                                 {badge.earned ? 'Earned' : badge.requirement}
                               </span>
                             </div>
@@ -543,7 +535,7 @@ export default function DashboardPage() {
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm shadow-lg">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-xl text-foreground">
-                  <Flame className="mr-3 h-6 w-6 text-red-400" /> 
+                  <Flame className="mr-3 h-6 w-6 text-red-400" />
                   Extreme Mode
                 </CardTitle>
               </CardHeader>

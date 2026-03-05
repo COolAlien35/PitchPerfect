@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
+import {
   BarChart3,
   TrendingUp,
   TrendingDown,
@@ -31,8 +31,6 @@ import {
   BarChart
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
-import { doc, collection, getDocs, query, orderBy, where, limit } from "firebase/firestore"
-import { db } from "@/src/firebase"
 
 interface SessionData {
   id: string
@@ -85,21 +83,13 @@ export default function AnalyticsPage() {
 
   const loadAnalyticsData = async () => {
     if (!user) return
-    
+
     try {
       setIsLoading(true)
-      
-      // Load user sessions
-      const sessionsRef = collection(db, 'users', user.uid, 'sessions')
-      const q = query(sessionsRef, orderBy('date', 'desc'))
-      const querySnapshot = await getDocs(q)
-      
-      const sessions: SessionData[] = []
-      querySnapshot.forEach((doc) => {
-        sessions.push({ id: doc.id, ...doc.data() } as SessionData)
-      })
 
-      // Calculate analytics
+      // TODO: Load sessions from backend when endpoint is available
+      // For now, calculate analytics from empty data
+      const sessions: SessionData[] = []
       const analytics = calculateAnalytics(sessions)
       setAnalyticsData(analytics)
     } catch (error) {
@@ -147,7 +137,7 @@ export default function AnalyticsPage() {
     // Sessions by type
     const sessionsByType: { [key: string]: number } = {}
     const scoresByType: { [key: string]: number[] } = {}
-    
+
     sessions.forEach(session => {
       sessionsByType[session.type] = (sessionsByType[session.type] || 0) + 1
       if (!scoresByType[session.type]) scoresByType[session.type] = []
@@ -219,43 +209,43 @@ export default function AnalyticsPage() {
 
   const calculateCurrentStreak = (sessions: SessionData[]): number => {
     if (sessions.length === 0) return 0
-    
+
     const today = new Date()
     let streak = 0
-    
+
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
       const dateStr = checkDate.toISOString().split('T')[0]
-      
-      const hasSession = sessions.some(session => 
+
+      const hasSession = sessions.some(session =>
         session.date.split('T')[0] === dateStr
       )
-      
+
       if (hasSession) {
         streak++
       } else if (i > 0) {
         break
       }
     }
-    
+
     return streak
   }
 
   const calculateLongestStreak = (sessions: SessionData[]): number => {
     if (sessions.length === 0) return 0
-    
-    const sortedSessions = [...sessions].sort((a, b) => 
+
+    const sortedSessions = [...sessions].sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     )
-    
+
     let maxStreak = 0
     let currentStreak = 0
     let lastDate: Date | null = null
-    
+
     sortedSessions.forEach(session => {
       const sessionDate = new Date(session.date)
-      
+
       if (lastDate) {
         const daysDiff = Math.floor((sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
         if (daysDiff === 1) {
@@ -267,28 +257,28 @@ export default function AnalyticsPage() {
       } else {
         currentStreak = 1
       }
-      
+
       lastDate = sessionDate
     })
-    
+
     return Math.max(maxStreak, currentStreak)
   }
 
   const calculateMonthlyProgress = (sessions: SessionData[]) => {
     const monthlyData: { [key: string]: { scores: number[], sessions: number } } = {}
-    
+
     sessions.forEach(session => {
       const date = new Date(session.date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      
+
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { scores: [], sessions: 0 }
       }
-      
+
       monthlyData[monthKey].scores.push(session.score)
       monthlyData[monthKey].sessions++
     })
-    
+
     return Object.entries(monthlyData).map(([month, data]) => ({
       month,
       score: data.scores.reduce((sum, score) => sum + score, 0) / data.scores.length,
@@ -298,21 +288,21 @@ export default function AnalyticsPage() {
 
   const calculateWeeklyActivity = (sessions: SessionData[]) => {
     const weeklyData: { [key: string]: { scores: number[], sessions: number } } = {}
-    
+
     sessions.forEach(session => {
       const date = new Date(session.date)
       const weekStart = new Date(date)
       weekStart.setDate(date.getDate() - date.getDay())
       const weekKey = weekStart.toISOString().split('T')[0]
-      
+
       if (!weeklyData[weekKey]) {
         weeklyData[weekKey] = { scores: [], sessions: 0 }
       }
-      
+
       weeklyData[weekKey].scores.push(session.score)
       weeklyData[weekKey].sessions++
     })
-    
+
     return Object.entries(weeklyData).map(([week, data]) => ({
       week,
       sessions: data.sessions,
@@ -322,15 +312,15 @@ export default function AnalyticsPage() {
 
   const calculateRecentTrend = (sessions: SessionData[]): 'up' | 'down' | 'stable' => {
     if (sessions.length < 4) return 'stable'
-    
+
     const recent = sessions.slice(0, 3)
     const previous = sessions.slice(3, 6)
-    
+
     const recentAvg = recent.reduce((sum, s) => sum + s.score, 0) / recent.length
     const previousAvg = previous.reduce((sum, s) => sum + s.score, 0) / previous.length
-    
+
     const diff = recentAvg - previousAvg
-    
+
     if (diff > 0.5) return 'up'
     if (diff < -0.5) return 'down'
     return 'stable'
@@ -339,48 +329,48 @@ export default function AnalyticsPage() {
   const analyzePerformance = (scoresByType: { [key: string]: number[] }) => {
     const strengths: string[] = []
     const weaknesses: string[] = []
-    
+
     Object.entries(scoresByType).forEach(([type, scores]) => {
       const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length
       const typeInfo = sessionTypes.find(t => t.value === type)
-      
+
       if (avgScore >= 8.0) {
         strengths.push(typeInfo?.label || type)
       } else if (avgScore < 6.0) {
         weaknesses.push(typeInfo?.label || type)
       }
     })
-    
+
     return { strengths, weaknesses }
   }
 
   const generateRecommendations = (data: AnalyticsData): string[] => {
     const recommendations: string[] = []
-    
+
     if (data.totalSessions < 5) {
       recommendations.push("Complete more practice sessions to get better insights")
     }
-    
+
     if (data.averageScore < 7.0) {
       recommendations.push("Focus on improving your overall performance")
     }
-    
+
     if (data.currentStreak < 3) {
       recommendations.push("Try to maintain a consistent practice schedule")
     }
-    
+
     if (data.weaknesses.length > 0) {
       recommendations.push(`Focus on improving: ${data.weaknesses.join(', ')}`)
     }
-    
+
     if (data.improvementRate < 0) {
       recommendations.push("Consider reviewing your practice strategy")
     }
-    
+
     if (recommendations.length === 0) {
       recommendations.push("Great job! Keep up the excellent work!")
     }
-    
+
     return recommendations
   }
 
@@ -427,7 +417,7 @@ export default function AnalyticsPage() {
           <p className="text-muted-foreground mb-6">
             Complete some practice sessions to see your analytics
           </p>
-          <Button 
+          <Button
             onClick={() => router.push('/dashboard')}
             className="btn-gradient-primary"
           >
@@ -444,9 +434,9 @@ export default function AnalyticsPage() {
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl shadow-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => router.back()} 
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -459,10 +449,10 @@ export default function AnalyticsPage() {
               Performance Analytics
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={loadAnalyticsData}
               className="bg-background/50 border-border"
@@ -470,8 +460,8 @@ export default function AnalyticsPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               className="bg-background/50 border-border"
             >
@@ -576,7 +566,7 @@ export default function AnalyticsPage() {
                     {Object.entries(analyticsData.sessionsByType).map(([type, count]) => {
                       const typeInfo = sessionTypes.find(t => t.value === type)
                       const percentage = (count / analyticsData.totalSessions) * 100
-                      
+
                       return (
                         <div key={type} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -587,7 +577,7 @@ export default function AnalyticsPage() {
                           </div>
                           <div className="flex items-center space-x-3">
                             <div className="w-20 bg-muted rounded-full h-2">
-                              <div 
+                              <div
                                 className={`h-2 rounded-full ${typeInfo?.color || 'bg-gray-500'}`}
                                 style={{ width: `${percentage}%` }}
                               ></div>
@@ -620,7 +610,7 @@ export default function AnalyticsPage() {
                       const typeInfo = sessionTypes.find(t => t.value === type)
                       const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length
                       const progress = (avgScore / 10) * 100
-                      
+
                       return (
                         <div key={type} className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -666,7 +656,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-16 bg-muted rounded-full h-2">
-                          <div 
+                          <div
                             className="h-2 rounded-full bg-primary"
                             style={{ width: `${(week.avgScore / 10) * 100}%` }}
                           ></div>
@@ -755,7 +745,7 @@ export default function AnalyticsPage() {
                           <p className="text-xs text-muted-foreground">Average Score</p>
                         </div>
                         <div className="w-20 bg-muted rounded-full h-2">
-                          <div 
+                          <div
                             className="h-2 rounded-full bg-primary"
                             style={{ width: `${(month.score / 10) * 100}%` }}
                           ></div>

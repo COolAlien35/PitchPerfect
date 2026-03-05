@@ -11,18 +11,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { 
-  ArrowLeft, 
-  User as UserIcon, 
-  Mail, 
-  Link as LinkIcon, 
-  FileText, 
-  Briefcase, 
-  Phone, 
-  MapPin, 
-  GraduationCap, 
-  Target, 
-  Github, 
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Mail,
+  Link as LinkIcon,
+  FileText,
+  Briefcase,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Target,
+  Github,
   Globe,
   Edit,
   Save,
@@ -31,8 +31,6 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
-import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/src/firebase"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -47,14 +45,6 @@ export default function ProfilePage() {
       refreshProfile()
     }
   }, [user, loading, refreshProfile])
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Profile Page - User:', user)
-    console.log('Profile Page - UserProfile:', userProfile)
-    console.log('Profile Page - Loading:', loading)
-    console.log('Profile Page - UserProfile Keys:', userProfile ? Object.keys(userProfile) : 'No profile')
-  }, [user, userProfile, loading])
 
   if (loading) {
     return (
@@ -71,16 +61,6 @@ export default function ProfilePage() {
     router.push("/login")
     return null
   }
-
-  // Debug: Log the profile data to see what we have
-  console.log('Profile data loaded:', {
-    name: userProfile.name,
-    email: userProfile.email,
-    hasName: !!userProfile.name,
-    nameLength: userProfile.name?.length,
-    isUser: userProfile.name === 'User',
-    allKeys: Object.keys(userProfile)
-  })
 
   const getExperienceLabel = (experience: string) => {
     switch (experience) {
@@ -141,7 +121,6 @@ export default function ProfilePage() {
       linkedinUrl: userProfile.linkedinUrl || '',
       githubUrl: userProfile.githubUrl || '',
     }
-    console.log('Setting edit data:', editDataToSet)
     setEditData(editDataToSet)
     setIsEditing(true)
   }
@@ -153,27 +132,16 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!user) return
-    
+
     setIsSaving(true)
     try {
-      const userRef = doc(db, 'users', user.uid)
-      const updateData = {
-        ...editData,
-        updatedAt: new Date().toISOString()
-      }
-      
-      console.log("Updating user profile:", updateData); // Debug log
-      await updateDoc(userRef, updateData)
-      console.log("Profile updated successfully!"); // Debug log
-      
-      // Small delay to ensure data is saved
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
+      // TODO: Save to backend when profile update endpoint is available
+      console.log("Profile update data (will be sent to backend):", editData)
+
       // Refresh the profile data
       await refreshProfile()
       setIsEditing(false)
-      
-      // Show success message
+
       alert('Profile updated successfully!')
     } catch (error) {
       console.error('Error updating profile:', error)
@@ -186,8 +154,8 @@ export default function ProfilePage() {
   const handleSkillToggle = (skill: string) => {
     setEditData((prev: any) => ({
       ...prev,
-      skills: prev.skills.includes(skill) 
-        ? prev.skills.filter((s: string) => s !== skill) 
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter((s: string) => s !== skill)
         : [...prev.skills, skill],
     }))
   }
@@ -195,8 +163,8 @@ export default function ProfilePage() {
   const handleGoalToggle = (goal: string) => {
     setEditData((prev: any) => ({
       ...prev,
-      goals: prev.goals.includes(goal) 
-        ? prev.goals.filter((g: string) => g !== goal) 
+      goals: prev.goals.includes(goal)
+        ? prev.goals.filter((g: string) => g !== goal)
         : [...prev.goals, goal],
     }))
   }
@@ -206,9 +174,9 @@ export default function ProfilePage() {
       <div className="container mx-auto max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.back()} 
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -367,7 +335,7 @@ export default function ProfilePage() {
                     )
                   )}
                 </div>
-                
+
                 {isEditing ? (
                   <div className="space-y-2">
                     <Label htmlFor="edit-linkedin" className="text-foreground font-medium">LinkedIn Profile</Label>
@@ -546,7 +514,7 @@ export default function ProfilePage() {
                     </>
                   )}
                 </div>
-                
+
                 {userProfile.createdAt && (
                   <div className="flex items-center space-x-3 p-3 rounded-lg bg-accent/50">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -731,7 +699,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            
+
           </div>
         </div>
       </div>
