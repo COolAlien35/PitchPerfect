@@ -9,7 +9,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-const facialApiUrl = 'http://127.0.0.1:8000/analyze';
+const facialApiUrl = 'http://127.0.0.1:8002/analyze';
 const voiceApiUrl = 'http://127.0.0.1:8001/analyze-voice'; // New voice service URL
 
 app.prepare().then(() => {
@@ -31,29 +31,37 @@ app.prepare().then(() => {
     // Handler for facial analysis
     socket.on('video-frame', async (frame) => {
       try {
-        const response = await axios.post(facialApiUrl, { image: frame });
+        const response = await axios.post(facialApiUrl, { image: frame }, { timeout: 5000 });
         socket.emit('analysis-result', response.data);
       } catch (error) {
-        console.error('Error calling Python Facial API:', error.message);
-        socket.emit('analysis-error', { error: 'Failed to analyze frame.' });
+        // Only log once per connection rather than spamming
+        if (!socket._facialApiWarned) {
+          console.warn('Facial analysis service unavailable (port 8002). Returning neutral fallback.');
+          socket._facialApiWarned = true;
+        }
+        // Return neutral fallback so the UI still works
+        socket.emit('analysis-result', {
+          emotion: { happy: 0, sad: 0, angry: 0, surprised: 0, neutral: 100, disgusted: 0, fearful: 0 },
+          dominant_emotion: 'neutral'
+        });
       }
     });
 
     // Handler for voice analysis
     socket.on('audio-chunk', async (chunk) => {
-        try {
-            const formData = new FormData();
-            formData.append('file', chunk, { filename: 'audio.wav', contentType: 'audio/wav' });
+      try {
+        const formData = new FormData();
+        formData.append('file', chunk, { filename: 'audio.wav', contentType: 'audio/wav' });
 
-            const response = await axios.post(voiceApiUrl, formData, {
-                headers: formData.getHeaders(),
-            });
+        const response = await axios.post(voiceApiUrl, formData, {
+          headers: formData.getHeaders(),
+        });
 
-            socket.emit('voice-analysis-result', response.data);
-        } catch (error) {
-            console.error('Error calling Python Voice API:', error.response ? error.response.data : error.message);
-            socket.emit('voice-analysis-error', { error: 'Failed to analyze audio.' });
-        }
+        socket.emit('voice-analysis-result', response.data);
+      } catch (error) {
+        console.error('Error calling Python Voice API:', error.response ? error.response.data : error.message);
+        socket.emit('voice-analysis-error', { error: 'Failed to analyze audio.' });
+      }
     });
 
     socket.on('disconnect', () => {

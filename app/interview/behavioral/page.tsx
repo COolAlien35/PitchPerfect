@@ -146,27 +146,27 @@ export default function BehavioralInterviewPage() {
 
   const handleAnalysis = useCallback((data: any) => {
     if (data.emotion) {
-        const { happy, neutral } = data.emotion;
-        const total = Object.values(data.emotion).reduce((acc: any, val: any) => acc + (val as number), 0) as number;
-        const confidence = ((happy + neutral) / total) * 100;
-        setConfidenceScore(confidence);
-        setEmotionData(data.emotion);
-        
-        // Store emotion history for analysis
-        setEmotionHistory(prev => [...prev, { ...data.emotion, timestamp: Date.now() }]);
+      const { happy, neutral } = data.emotion;
+      const total = Object.values(data.emotion).reduce((acc: any, val: any) => acc + (val as number), 0) as number;
+      const confidence = ((happy + neutral) / total) * 100;
+      setConfidenceScore(confidence);
+      setEmotionData(data.emotion);
+
+      // Store emotion history for analysis
+      setEmotionHistory(prev => [...prev, { ...data.emotion, timestamp: Date.now() }]);
     }
   }, []);
 
   const handleVoiceAnalysis = useCallback((data: any) => {
     setVoiceData(data);
-    
+
     // Store voice analysis history for analysis
     setVoiceAnalysisHistory(prev => [...prev, { ...data, timestamp: Date.now() }]);
   }, []);
 
   const handleAvatarReaction = useCallback((reaction: any) => {
     setAvatarReaction(reaction);
-    
+
     // Track interruptions based on avatar reactions
     if (reaction.type === 'interruption') {
       setInterruptionsHandled(prev => prev + 1);
@@ -241,7 +241,7 @@ export default function BehavioralInterviewPage() {
         if (transcript.length > 10) {
           // User is actively speaking
           setIsUserSpeaking(true)
-          
+
           // Store the response for the current question
           if (isInterviewStarted && currentQuestion < questions.length) {
             setUserResponses(prev => {
@@ -271,7 +271,7 @@ export default function BehavioralInterviewPage() {
       // Check URL parameters for technical mode
       const urlParams = new URLSearchParams(window.location.search)
       const isTechnicalMode = urlParams.get('mode') === 'technical'
-      
+
       if (isTechnicalMode) {
         const technicalData = localStorage.getItem('technicalInterviewData')
         if (technicalData) {
@@ -289,23 +289,30 @@ export default function BehavioralInterviewPage() {
     checkTechnicalInterview()
   }, [])
 
-  // Monitor audio levels for visual feedback
+  // Monitor audio levels for visual feedback (throttled to avoid render storms)
   const monitorAudioLevel = () => {
     if (!analyserRef.current) return
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
+    let lastUpdateTime = 0
 
     const checkAudioLevel = () => {
       if (analyserRef.current) {
         analyserRef.current.getByteFrequencyData(dataArray)
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length
-        setAudioLevel(average)
 
-        // Detect if user is speaking based on audio level
-        if (average > 20 && !isAvatarSpeaking) {
-          setIsUserSpeaking(true)
-        } else if (average < 10) {
-          setIsUserSpeaking(false)
+        // Throttle state updates to every 100ms to prevent render storms
+        const now = Date.now()
+        if (now - lastUpdateTime > 100) {
+          lastUpdateTime = now
+          setAudioLevel(average)
+
+          // Detect if user is speaking based on audio level
+          if (average > 20 && !isAvatarSpeaking) {
+            setIsUserSpeaking(true)
+          } else if (average < 10) {
+            setIsUserSpeaking(false)
+          }
         }
       }
       requestAnimationFrame(checkAudioLevel)
@@ -442,7 +449,7 @@ export default function BehavioralInterviewPage() {
     if (speechRecognition && isListeningForSpeech) {
       speechRecognition.stop()
     }
-    
+
     // Store session data for analysis even if ending early
     const sessionData = {
       type: isTechnicalInterview ? "Technical Interview" : "Behavioral Interview",
@@ -571,7 +578,7 @@ export default function BehavioralInterviewPage() {
               {/* User Video */}
               <Card className="bg-white/10 border-white/20 backdrop-blur-sm hover:bg-white/15 transition-all duration-300 transform hover:scale-[1.02]">
                 <CardContent className="p-6">
-                    <RealTimeAnalysis onAnalysis={handleAnalysis} />
+                  <RealTimeAnalysis onAnalysis={handleAnalysis} />
                 </CardContent>
               </Card>
             </div>
@@ -706,12 +713,12 @@ export default function BehavioralInterviewPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {emotionData && Object.entries(emotionData).map(([emotion, value]) => (
-                    <div key={emotion} className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                        <div className="flex items-center">
-                            <span className="text-sm">{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</span>
-                        </div>
-                        <span className="font-bold text-purple-400">{`${Number(value).toFixed(2)}%`}</span>
+                  <div key={emotion} className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="flex items-center">
+                      <span className="text-sm">{emotion.charAt(0).toUpperCase() + emotion.slice(1)}</span>
                     </div>
+                    <span className="font-bold text-purple-400">{`${Number(value).toFixed(2)}%`}</span>
+                  </div>
                 ))}
               </CardContent>
             </Card>
@@ -727,28 +734,28 @@ export default function BehavioralInterviewPage() {
               <CardContent className="space-y-4">
                 <VoiceAnalysis onAnalysis={handleVoiceAnalysis} isInterviewStarted={isInterviewStarted} />
                 {voiceData && (
-                    <>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-sm">Filler Words</span>
-                            <span className="font-bold text-purple-400">{voiceData.fillerWords}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-sm">WPM</span>
-                            <span className="font-bold text-purple-400">{voiceData.wpm}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-sm">Volume</span>
-                            <span className="font-bold text-purple-400">{voiceData.volume}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-sm">Confidence</span>
-                            <span className="font-bold text-purple-400">{voiceData.confidence}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                            <span className="text-sm">Clarity</span>
-                            <span className="font-bold text-purple-400">{voiceData.clarity}</span>
-                        </div>
-                    </>
+                  <>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      <span className="text-sm">Filler Words</span>
+                      <span className="font-bold text-purple-400">{voiceData.fillerWords}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      <span className="text-sm">WPM</span>
+                      <span className="font-bold text-purple-400">{voiceData.wpm}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      <span className="text-sm">Volume</span>
+                      <span className="font-bold text-purple-400">{voiceData.volume}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      <span className="text-sm">Confidence</span>
+                      <span className="font-bold text-purple-400">{voiceData.confidence}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      <span className="text-sm">Clarity</span>
+                      <span className="font-bold text-purple-400">{voiceData.clarity}</span>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
