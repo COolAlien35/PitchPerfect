@@ -32,8 +32,8 @@ soundfile>=0.12.0
 # numpy>=1.26.0
 
 # Background tasks (optional)
-# celery>=5.4.0
-# kombu>=5.3.0
+celery>=5.4.0
+kombu>=5.3.0
 
 # PDF reporting (optional)
 # reportlab>=4.2.0

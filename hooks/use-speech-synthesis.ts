@@ -53,8 +53,7 @@ export function useSpeechSynthesis({ onStart, onEnd, onError }: UseSpeechSynthes
           (voice) =>
             voice.name.toLowerCase().includes(options.voice?.toLowerCase() || "female") ||
             voice.name.toLowerCase().includes("samantha") ||
-            voice.name.toLowerCase().includes("karen") ||
-            voice.gender === "female",
+            voice.name.toLowerCase().includes("karen"),
         ) ||
         voices.find((voice) => voice.lang.startsWith("en")) ||
         voices[0]

@@ -89,7 +89,7 @@ apiClient.interceptors.response.use(
                 (error.response?.data as Record<string, string>)?.message ??
                 error.message,
             status: status ?? 0,
-            detail: (error.response?.data as Record<string, unknown>)?.detail,
+            detail: (error.response?.data as Record<string, unknown>)?.detail as string | Record<string, unknown> | undefined,
         };
 
         return Promise.reject(apiError);

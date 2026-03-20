@@ -66,7 +66,7 @@ export function MediaContainer({
                     personality={interviewer.personality}
                     isSpeaking={isAvatarSpeaking}
                     isListening={isListeningForSpeech}
-                    userEmotion={emotionData || undefined}
+                    userEmotion={(emotionData as any) || undefined}
                     userVolume={audioLevel}
                     userSpeaking={isUserSpeaking}
                     onReactionChange={onAvatarReaction}

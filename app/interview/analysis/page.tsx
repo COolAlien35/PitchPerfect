@@ -341,7 +341,7 @@ export default function InterviewAnalysisPage() {
     return idealAnswers[question] || "Provide a detailed response using the STAR method with specific examples and quantifiable results."
   }
 
-  const detailedScores = calculatedScores || {
+  const detailedScores: Record<string, number> = calculatedScores || {
     communication: 88,
     confidence: 82,
     clarity: 85,
@@ -834,7 +834,7 @@ export default function InterviewAnalysisPage() {
               </p>
             </div>
 
-            {correctAnswers.map((item, index) => (
+            {correctAnswers.map((item: any, index: number) => (
               <Card key={index} className="border-l-4 border-l-blue-500">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">

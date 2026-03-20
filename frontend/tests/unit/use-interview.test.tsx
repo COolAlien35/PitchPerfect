@@ -17,7 +17,7 @@ import {
     type Interview,
     type InterviewDetail,
     type PaginatedInterviews,
-} from '@/hooks/use-interviews';
+} from '@/frontend/hooks/use-interviews';
 
 // ---------------------------------------------------------------------------
 // Fixtures

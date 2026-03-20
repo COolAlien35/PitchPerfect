@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 // ---------------------------------------------------------------------------
 // Base shimmer primitive
 // ---------------------------------------------------------------------------
-function Shimmer({ className }: { className?: string }) {
+function Shimmer({ className, style }: { className?: string; style?: React.CSSProperties }) {
     return (
         <div
             className={cn(
@@ -18,6 +18,7 @@ function Shimmer({ className }: { className?: string }) {
                 "before:from-transparent before:via-white/60 before:to-transparent",
                 className
             )}
+            style={style}
         />
     )
 }
