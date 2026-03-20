@@ -39,11 +39,9 @@ class ReportTriggerResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# DB session dependency (wire to your actual get_db dependency in production)
+# DB session dependency (imported from central dependencies module)
 # ---------------------------------------------------------------------------
-async def get_db() -> AsyncSession:
-    raise NotImplementedError("Wire to your async session factory via dependency_overrides")
-
+from ...api.dependencies import get_db
 
 DB = Annotated[AsyncSession, Depends(get_db)]
 

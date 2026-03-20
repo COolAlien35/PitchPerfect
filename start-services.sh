@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start both services for PitchPerfect
+# Start PitchPerfect services (frontend + Python voice analysis)
 echo "🚀 Starting PitchPerfect services..."
 
 # Function to check if a port is in use
@@ -8,7 +8,7 @@ check_port() {
     lsof -ti:$1 > /dev/null 2>&1
 }
 
-# Check if Node.js server is already running
+# Check if Next.js is already running
 if check_port 3000; then
     echo "⚠️  Port 3000 is already in use. Please stop the existing service first."
     exit 1
@@ -30,10 +30,10 @@ cd ..
 # Wait a moment for Python service to start
 sleep 3
 
-# Start Node.js server
-echo "🟢 Starting Node.js server on port 3000..."
+# Start Next.js dev server (no longer goes through server.js)
+echo "⚡ Starting Next.js dev server on port 3000..."
 npm run dev &
-NODE_PID=$!
+NEXTJS_PID=$!
 
 echo "✅ Services started!"
 echo "📱 Frontend: http://localhost:3000"
@@ -46,7 +46,7 @@ cleanup() {
     echo ""
     echo "🛑 Stopping services..."
     kill $PYTHON_PID 2>/dev/null
-    kill $NODE_PID 2>/dev/null
+    kill $NEXTJS_PID 2>/dev/null
     exit 0
 }
 

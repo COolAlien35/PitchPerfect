@@ -21,6 +21,7 @@ from .api.v1 import websocket as ws_router
 from .api.v1.auth import router as auth_router
 from .api.v1.health import router as health_router
 from .api.v1.interviews import router as interview_router
+from .api.v1.questions import router as questions_router
 from .infrastructure.redis_manager import redis_manager
 from .infrastructure.logging import configure_logging, RequestIDMiddleware
 from .middleware.monitoring import PrometheusMiddleware
@@ -153,6 +154,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)                                          # /health, /health/live, /health/ready
     app.include_router(auth_router)                                            # /api/v1/auth/*
     app.include_router(interview_router)                                       # /api/v1/interviews/*
+    app.include_router(questions_router)                                        # /api/v1/questions/*
     app.include_router(ws_router.router, tags=["WebSocket"])                   # /ws/interview/{session_id}
     # app.include_router(analytics_router, prefix="/api/v1/analytics",  tags=["Analytics"])
 

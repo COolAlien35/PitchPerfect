@@ -33,7 +33,7 @@ fi
 echo "🐍 Starting Python Resume Service on port 8002..."
 cd python-resume-service
 source venv/bin/activate
-GEMINI_API_KEY='AIzaSyBX6Ufv58b0FxVUiNJECLjyYLfnSxoGOJE' python3 main.py &
+GEMINI_API_KEY="$GEMINI_API_KEY" python3 main.py &
 PYTHON_PID=$!
 cd ..
 

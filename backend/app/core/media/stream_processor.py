@@ -1,152 +1,179 @@
-import asyncio
 import base64
 import io
 import logging
-from collections import deque
-from typing import Any, Deque, Dict
+import os
+from typing import Any, Dict, Optional
 
-import cv2
+import httpx
 import numpy as np
-from pydub import AudioSegment
+import soundfile as sf
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
-# Accumulate approx. 3 seconds of audio at 16kHz before transcribing
-AUDIO_FLUSH_INTERVAL_SEC: float = 3.0
+# ---------------------------------------------------------------------------
+# Microservice URLs — overridable via environment for Docker / production
+# ---------------------------------------------------------------------------
+FACIAL_API_URL: str = os.getenv("FACIAL_API_URL", "http://127.0.0.1:8002/analyze")
+VOICE_API_URL: str = os.getenv("VOICE_API_URL", "http://127.0.0.1:8001/analyze-voice")
+
+# Neutral emotion fallback — mirrors server.js behaviour when the facial
+# analysis microservice is unreachable.
+_NEUTRAL_FALLBACK: Dict[str, Any] = {
+    "emotion": {
+        "happy": 0,
+        "sad": 0,
+        "angry": 0,
+        "surprised": 0,
+        "neutral": 100,
+        "disgusted": 0,
+        "fearful": 0,
+    },
+    "dominant_emotion": "neutral",
+}
+
+# Lazy-init OpenAI client (only created when OPENAI_API_KEY is set)
+_openai_client: Optional[AsyncOpenAI] = None
+
+
+def _get_openai_client() -> Optional[AsyncOpenAI]:
+    global _openai_client
+    if _openai_client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            _openai_client = AsyncOpenAI(api_key=api_key)
+        else:
+            logger.warning("OPENAI_API_KEY not set — Whisper transcription disabled")
+    return _openai_client
 
 
 class StreamProcessor:
     """
-    Stateful per-session processor. Accumulates audio chunks and routes
-    decoded video frames to downstream AI services.
+    Stateful per-session processor.  Decodes media frames, forwards them to
+    the facial / voice analysis microservices via httpx, runs Whisper STT,
+    and returns results so the WebSocket handler can relay them to the client.
     """
 
     def __init__(self, session_id: str):
         self.session_id = session_id
-        self._audio_buffer: Deque[bytes] = deque()
-        self._flush_task: asyncio.Task | None = None
-        self._running = True
+        self._facial_api_warned = False
 
-        # Kick off the periodic audio flush loop
-        self._flush_task = asyncio.create_task(self._audio_flush_loop())
-
-    # ------------------------------------------------------------------
-    # Audio
-    # ------------------------------------------------------------------
-    async def handle_audio_stream(self, audio_base64: str, metadata: Dict[str, Any]) -> None:
-        """
-        Decode and buffer binary audio chunks.
-        Transcription is triggered by the periodic flush loop, not per-chunk,
-        to minimise LLM call frequency under high-throughput conditions.
-        """
-        try:
-            chunk_bytes = base64.b64decode(audio_base64)
-            self._audio_buffer.append(chunk_bytes)
-        except Exception as exc:
-            logger.warning("Session %s – audio decode error: %s", self.session_id, exc)
-
-    async def _audio_flush_loop(self) -> None:
-        """
-        Runs as a background task; flushes accumulated audio buffer every
-        AUDIO_FLUSH_INTERVAL_SEC seconds and dispatches to the transcription service.
-        """
-        while self._running:
-            await asyncio.sleep(AUDIO_FLUSH_INTERVAL_SEC)
-            if not self._audio_buffer:
-                continue
-
-            # Drain the buffer atomically
-            chunks = list(self._audio_buffer)
-            self._audio_buffer.clear()
-
-            try:
-                samples = self._normalise_audio(b"".join(chunks))
-                await self._dispatch_transcription(samples)
-            except Exception as exc:
-                logger.error("Session %s – flush error: %s", self.session_id, exc)
-
-    @staticmethod
-    def _normalise_audio(raw_bytes: bytes) -> np.ndarray:
-        """
-        Convert raw PCM/compressed bytes → mono 16kHz float32 numpy array.
-        Normalised to [-1.0, 1.0] range expected by Whisper.
-        """
-        audio = AudioSegment.from_file(io.BytesIO(raw_bytes))
-        audio = audio.set_frame_rate(16000).set_channels(1)
-
-        target_dbfs = -20.0
-        diff = target_dbfs - audio.dBFS
-        audio = audio.apply_gain(diff)
-
-        samples = np.array(audio.get_array_of_samples(), dtype=np.float32) / 32768.0
-        return samples
-
-    async def _dispatch_transcription(self, samples: np.ndarray) -> None:
-        """
-        Placeholder: hand off float32 waveform to Whisper (OpenAI or local).
-        Replace with actual async transcription client call.
-        """
-        # e.g.: transcript = await whisper_client.atranscribe(samples)
-        #        await interview_service.process_transcript(self.session_id, transcript)
-        logger.debug("Session %s – dispatching %d audio samples for transcription", self.session_id, len(samples))
+        # Shared async HTTP client — connection-pooled per processor
+        self._http: httpx.AsyncClient = httpx.AsyncClient(timeout=5.0)
 
     # ------------------------------------------------------------------
     # Video
     # ------------------------------------------------------------------
-    async def handle_video_stream(self, frame_base64: str, metadata: Dict[str, Any]) -> None:
+    async def handle_video_stream(
+        self, frame_base64: str, metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Decode a single base64-encoded JPEG/PNG frame and route to facial
-        expression analysis service.
+        POST the raw base64 image to the facial analysis microservice and
+        return the emotion result dict.  Falls back to a neutral result if
+        the service is unavailable (matching the old server.js behaviour).
         """
         try:
-            frame = self._decode_frame(frame_base64)
-            if frame is None:
-                raise ValueError("cv2.imdecode returned None – invalid image data")
-            await self._dispatch_facial_analysis(frame)
+            response = await self._http.post(
+                FACIAL_API_URL,
+                json={"image": frame_base64},
+            )
+            response.raise_for_status()
+            return response.json()
         except Exception as exc:
-            logger.warning("Session %s – video decode error: %s", self.session_id, exc)
+            if not self._facial_api_warned:
+                logger.warning(
+                    "Session %s – facial analysis service unavailable (%s). "
+                    "Returning neutral fallback.",
+                    self.session_id,
+                    exc,
+                )
+                self._facial_api_warned = True
+            return dict(_NEUTRAL_FALLBACK)  # shallow copy
 
-    @staticmethod
-    def _decode_frame(frame_base64: str) -> np.ndarray | None:
+    # ------------------------------------------------------------------
+    # Audio — voice analysis (forwarded to microservice)
+    # ------------------------------------------------------------------
+    async def handle_audio_stream(
+        self, audio_base64: str, metadata: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
-        Decode base64 → numpy BGR image array using zero-copy numpy frombuffer.
-        Efficient on ARM64 (M1/M2) as no intermediate Python list is created.
+        POST the audio chunk as multipart form-data to the voice analysis
+        microservice.  Returns the voice-metrics dict on success, or an
+        error dict on failure.
         """
-        img_bytes = base64.b64decode(frame_base64)
-        nparr = np.frombuffer(img_bytes, dtype=np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        return frame
+        try:
+            audio_bytes = base64.b64decode(audio_base64)
+            files = {"file": ("audio.wav", io.BytesIO(audio_bytes), "audio/wav")}
+            response = await self._http.post(VOICE_API_URL, files=files)
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            logger.error(
+                "Session %s – voice analysis error: %s",
+                self.session_id,
+                exc,
+            )
+            return {"error": "Failed to analyze audio."}
 
-    async def _dispatch_facial_analysis(self, frame: np.ndarray) -> None:
+    # ------------------------------------------------------------------
+    # Audio — Whisper speech-to-text
+    # ------------------------------------------------------------------
+    async def transcribe_audio(self, audio_base64: str) -> str:
         """
-        Placeholder: pass decoded frame to emotion/gaze analysis service.
-        Replace with actual async model inference call.
+        Decode base64 audio, convert to WAV in memory, and send to OpenAI
+        Whisper API for transcription.
+
+        Returns the transcript string, or empty string on failure (never
+        crashes the session).
         """
-        # e.g.: emotions = await facial_service.analyse(frame)
-        #        await redis_manager.publish_feedback(self.session_id, emotions)
-        logger.debug("Session %s – dispatching video frame for facial analysis (shape=%s)", self.session_id, frame.shape)
+        client = _get_openai_client()
+        if client is None:
+            return ""
+
+        try:
+            # Decode base64 → raw audio bytes
+            raw_bytes = base64.b64decode(audio_base64)
+
+            # Read into numpy via soundfile (handles WAV/FLAC/OGG etc.)
+            # then re-write as 16kHz mono WAV for Whisper
+            data, samplerate = sf.read(io.BytesIO(raw_bytes))
+
+            # Ensure mono
+            if data.ndim > 1:
+                data = data.mean(axis=1)
+
+            # Write normalised WAV to in-memory buffer
+            wav_buffer = io.BytesIO()
+            sf.write(wav_buffer, data, samplerate=16000, format="WAV", subtype="PCM_16")
+            wav_buffer.seek(0)
+            wav_buffer.name = "audio.wav"  # OpenAI requires a .name attribute
+
+            transcript = await client.audio.transcriptions.create(
+                model="whisper-1",
+                file=wav_buffer,
+                response_format="text",
+            )
+
+            logger.debug(
+                "Session %s – Whisper transcript (%d chars): %.80s…",
+                self.session_id,
+                len(transcript),
+                transcript,
+            )
+            return transcript.strip()
+
+        except Exception as exc:
+            logger.warning(
+                "Session %s – Whisper transcription failed: %s",
+                self.session_id,
+                exc,
+            )
+            return ""
 
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
     async def finalize(self) -> None:
-        """
-        Cancel the flush loop and drain any remaining audio on disconnect.
-        """
+        """Clean up the HTTP client on disconnect."""
         self._running = False
-        if self._flush_task:
-            self._flush_task.cancel()
-            try:
-                await self._flush_task
-            except asyncio.CancelledError:
-                pass
-
-        # Final flush of leftover audio
-        if self._audio_buffer:
-            chunks = list(self._audio_buffer)
-            self._audio_buffer.clear()
-            try:
-                samples = self._normalise_audio(b"".join(chunks))
-                await self._dispatch_transcription(samples)
-            except Exception as exc:
-                logger.error("Session %s – final flush error: %s", self.session_id, exc)
+        await self._http.aclose()

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Proxies to FastAPI backend for LangChain-powered question generation
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -15,41 +16,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert file to buffer for Python service
-    const buffer = Buffer.from(await resume.arrayBuffer())
-    
-    // Create data to send to Python service
-    const pythonServiceData = {
-      resume: buffer.toString('base64'),
-      resumeFileName: resume.name,
-      preferredIndustry,
-      desiredRole,
-      jobDescription
-    }
+    // Extract resume text from the uploaded file
+    const resumeText = await resume.text()
 
-    // Call Python service to process resume and generate questions
-    const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://localhost:8002/generate-questions'
-    
-    const response = await fetch(pythonServiceUrl, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+    const resp = await fetch(`${apiUrl}/api/v1/questions/technical`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(pythonServiceData)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resume_text: resumeText,
+        job_description: jobDescription,
+        job_role: desiredRole,
+        num_questions: 10,
+      }),
     })
 
-    if (!response.ok) {
-      throw new Error(`Python service error: ${response.statusText}`)
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}))
+      throw new Error(errorData.detail || `FastAPI error: ${resp.status}`)
     }
 
-    const data = await response.json()
-    
-    return NextResponse.json({
-      questions: data.questions,
-      ideal_answers: data.ideal_answers,
-      success: true
-    })
+    const data = await resp.json()
 
+    return NextResponse.json({
+      questions: data.questions?.map((q: any) => q.text || q) || [],
+      success: true,
+    })
   } catch (error) {
     console.error('Error generating technical questions:', error)
     return NextResponse.json(

@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, String, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
@@ -19,6 +20,11 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+
+    # Flexible profile data — stores onboarding fields like phone, bio,
+    # experience, targetRole, industry, company, education, skills[],
+    # goals[], linkedinUrl, githubUrl as a single JSONB blob.
+    profile_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
 
     # Relationships
     interviews: Mapped[List["Interview"]] = relationship(
