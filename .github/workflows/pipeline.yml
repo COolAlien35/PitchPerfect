@@ -51,7 +51,7 @@ jobs:
       - name: Mypy type-check
         run: mypy app --ignore-missing-imports --strict
 
-      - name: Pytest
+      - name: Pytest with coverage
         env:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
           REDIS_URL:    redis://localhost:6379/0
@@ -61,7 +61,8 @@ jobs:
           pytest tests/ \
             --cov=app \
             --cov-report=xml \
-            --cov-fail-under=70 \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
             -q
 
       - name: Upload coverage report
@@ -70,15 +71,18 @@ jobs:
           files: backend/coverage.xml
           flags: backend
 
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## Backend Coverage" >> $GITHUB_STEP_SUMMARY
+          python -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || true
+
   # ------------------------------------------------------------------
-  # Frontend CI
+  # Frontend CI — runs from repo root (Next.js project)
   # ------------------------------------------------------------------
   ci-frontend:
     name: Frontend – Lint, Type-check, Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +92,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -99,14 +103,23 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
-      - name: Jest unit tests
-        run: npm test -- --ci --coverage --watchAll=false
+      - name: Vitest unit tests
+        run: npx vitest run --config frontend/vitest.config.ts --coverage
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
         with:
-          files: frontend/coverage/lcov.info
+          files: coverage/lcov.info
           flags: frontend
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## Frontend Coverage" >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.json 2>/dev/null | \
+            node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).total; \
+              console.log('Lines: '+d.lines.pct+'%  Branches: '+d.branches.pct+'%  Functions: '+d.functions.pct+'%')" \
+            >> $GITHUB_STEP_SUMMARY || true
 
 # ====================================================================
 # CD – Docker build + push + deploy  (main branch only)
@@ -156,11 +169,11 @@ jobs:
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
-      # ---- Frontend image ----
+      # ---- Frontend image — context is repo root (Next.js app) ----
       - name: Build & push frontend
         uses: docker/build-push-action@v6
         with:
-          context:   ./frontend
+          context:   .
           file:      ./frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push:      true

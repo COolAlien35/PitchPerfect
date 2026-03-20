@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, ArrowRight, ArrowLeft, Brain, User, Briefcase, Target, GraduationCap, Globe, FileText, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth, apiFetch } from "@/hooks/use-auth"
 import ParticlesBackground from "@/components/Particles"
 
 export default function OnboardingPage() {
@@ -88,8 +88,15 @@ export default function OnboardingPage() {
             bio: formData.bio,
           };
 
-          // TODO: Save to backend when profile endpoint is available
-          console.log("Onboarding data (will be sent to backend):", userData);
+          // Save onboarding profile to backend
+          const res = await apiFetch('/api/v1/users/profile', {
+            method: 'POST',
+            body: JSON.stringify(userData),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail?.message || err.detail || 'Failed to save profile');
+          }
 
           router.push("/dashboard");
         } catch (error: any) {

@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth, apiFetch } from "@/hooks/use-auth"
 
 interface ScheduledSession {
   id: string
@@ -95,22 +95,44 @@ export default function SchedulePage() {
     reminder: true
   })
 
+  // Load scheduled sessions from backend on mount
+  useEffect(() => {
+    if (!user || loading) return
+    const loadSessions = async () => {
+      try {
+        const res = await apiFetch('/api/v1/schedule')
+        if (res.ok) {
+          const data = await res.json()
+          setScheduledSessions(data.sessions || [])
+        }
+      } catch (error) {
+        console.error('Error loading schedule:', error)
+      }
+    }
+    loadSessions()
+  }, [user, loading])
+
   const handleCreateSession = async () => {
     if (!user || !selectedDate) return
 
     try {
-      const sessionData: ScheduledSession = {
-        id: crypto.randomUUID(),
+      const sessionPayload = {
         ...newSession,
         date: selectedDate.toISOString().split('T')[0],
-        status: 'scheduled' as const,
-        createdAt: new Date().toISOString()
       }
 
-      // TODO: Save to backend when schedule endpoint is available
-      console.log('Creating session (will be sent to backend):', sessionData)
+      const res = await apiFetch('/api/v1/schedule', {
+        method: 'POST',
+        body: JSON.stringify(sessionPayload),
+      })
 
-      setScheduledSessions(prev => [...prev, sessionData])
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail?.message || err.detail || 'Failed to create session')
+      }
+
+      const created = await res.json()
+      setScheduledSessions(prev => [...prev, created])
 
       // Reset form
       setNewSession({
@@ -133,8 +155,18 @@ export default function SchedulePage() {
   }
 
   const handleDeleteSession = async (sessionId: string) => {
-    // TODO: Delete from backend when schedule endpoint is available
-    setScheduledSessions(prev => prev.filter(s => s.id !== sessionId))
+    try {
+      const res = await apiFetch(`/api/v1/schedule/${sessionId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok && res.status !== 204) {
+        throw new Error('Failed to delete session')
+      }
+      setScheduledSessions(prev => prev.filter(s => s.id !== sessionId))
+    } catch (error) {
+      console.error('Error deleting session:', error)
+      alert(`Failed to delete session: ${error instanceof Error ? error.message : 'Unknown error'}.`)
+    }
   }
 
   const getSessionTypeInfo = (type: string) => {

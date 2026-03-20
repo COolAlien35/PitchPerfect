@@ -35,7 +35,7 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth, apiFetch } from "@/hooks/use-auth"
 import {
   LineChart,
   Line,
@@ -286,28 +286,39 @@ export default function InterviewAnalysisPage() {
     }
   }, [])
 
-  // Persist summarized session to localStorage
+  // Persist summarized session to backend
   useEffect(() => {
     if (!user || !sessionData || saved) return
 
-    const alreadySaved = localStorage.getItem("lastInterviewSession:saved")
-    if (alreadySaved === String(sessionData.sessionStartTime)) return
+    const saveSession = async () => {
+      try {
+        const durationSeconds = Number(sessionData.sessionTime || 0)
+        const minutes = Math.max(1, Math.round(durationSeconds / 60))
 
-    // TODO: Save to backend when sessions endpoint is available
-    const durationSeconds = Number(sessionData.sessionTime || 0)
-    const minutes = Math.max(1, Math.round(durationSeconds / 60))
+        const docData = {
+          type: sessionData.type || "Interview",
+          score: Number(overallScore) || 0,
+          date: new Date().toISOString(),
+          duration: `${minutes} min`,
+          category: (sessionData.type || '').toLowerCase().includes('technical') ? 'technical' : 'behavioral',
+        }
 
-    const docData = {
-      type: sessionData.type || "Interview",
-      score: Number(overallScore) || 0,
-      date: new Date().toISOString(),
-      duration: `${minutes} min`,
-      category: (sessionData.type || '').toLowerCase().includes('technical') ? 'technical' : 'behavioral',
+        const res = await apiFetch('/api/v1/analytics/sessions', {
+          method: 'POST',
+          body: JSON.stringify(docData),
+        });
+
+        if (res.ok) {
+          setSaved(true)
+        } else {
+          console.error('Failed to save session:', await res.text())
+        }
+      } catch (error) {
+        console.error('Error saving session:', error)
+      }
     }
 
-    console.log("Session result (will be sent to backend):", docData)
-    localStorage.setItem("lastInterviewSession:saved", String(sessionData.sessionStartTime || Date.now()))
-    setSaved(true)
+    saveSession()
   }, [user, sessionData, overallScore, saved])
 
   // Helper function to get ideal answers

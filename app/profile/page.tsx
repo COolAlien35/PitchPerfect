@@ -30,7 +30,7 @@ import {
   Calendar
 } from "lucide-react"
 import Image from "next/image"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth, apiFetch } from "@/hooks/use-auth"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -135,8 +135,15 @@ export default function ProfilePage() {
 
     setIsSaving(true)
     try {
-      // TODO: Save to backend when profile update endpoint is available
-      console.log("Profile update data (will be sent to backend):", editData)
+      // Save profile update to backend
+      const res = await apiFetch('/api/v1/users/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(editData),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail?.message || err.detail || 'Failed to update profile');
+      }
 
       // Refresh the profile data
       await refreshProfile()

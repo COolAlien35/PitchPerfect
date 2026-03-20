@@ -30,7 +30,7 @@ import {
   LineChart,
   BarChart
 } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth, apiFetch } from "@/hooks/use-auth"
 
 interface SessionData {
   id: string
@@ -87,9 +87,13 @@ export default function AnalyticsPage() {
     try {
       setIsLoading(true)
 
-      // TODO: Load sessions from backend when endpoint is available
-      // For now, calculate analytics from empty data
-      const sessions: SessionData[] = []
+      // Load sessions from backend
+      const res = await apiFetch('/api/v1/analytics/sessions');
+      let sessions: SessionData[] = [];
+      if (res.ok) {
+        const data = await res.json();
+        sessions = data.sessions || [];
+      }
       const analytics = calculateAnalytics(sessions)
       setAnalyticsData(analytics)
     } catch (error) {

@@ -85,7 +85,7 @@ function clearToken(): void {
   localStorage.removeItem('pp_access_token');
 }
 
-async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
