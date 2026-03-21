@@ -31,6 +31,16 @@ from app.api.dependencies import get_db
 from app.core.ai.service import FeedbackModel, QuestionList, Question
 
 # ---------------------------------------------------------------------------
+# JSONB → JSON shim for SQLite (PostgreSQL JSONB is not supported by SQLite)
+# ---------------------------------------------------------------------------
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
+
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+# ---------------------------------------------------------------------------
 # Test database — SQLite in-memory via aiosqlite
 # ---------------------------------------------------------------------------
 TEST_DB_URL = "sqlite+aiosqlite:///./test_pitchperfect.db"
@@ -60,9 +70,9 @@ def session_factory(engine):
 @pytest_asyncio.fixture
 async def db_session(session_factory) -> AsyncGenerator[AsyncSession, None]:
     async with session_factory() as session:
-        async with session.begin():
-            yield session
-            await session.rollback()
+        yield session
+        # Roll back any uncommitted changes so tests stay isolated
+        await session.rollback()
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +152,7 @@ async def app(db_session, mock_redis):
 async def client(app) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
         transport=ASGITransport(app=app),
-        base_url="http://testserver",
+        base_url="http://localhost",
         follow_redirects=True,
     ) as ac:
         yield ac
@@ -152,7 +162,7 @@ async def client(app) -> AsyncGenerator[AsyncClient, None]:
 # Helpers — register + login, return auth header
 # ---------------------------------------------------------------------------
 async def _register_and_login(client: AsyncClient, email: str | None = None) -> dict[str, str]:
-    email = email or f"test_{uuid4().hex[:8]}@pp.test"
+    email = email or f"test_{uuid4().hex[:8]}@example.com"
     payload = {"email": email, "password": "Test@Password123", "full_name": "Test User"}
     reg = await client.post("/api/v1/auth/register", json=payload)
     assert reg.status_code == 201, reg.text

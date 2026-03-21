@@ -10,19 +10,19 @@ from httpx import AsyncClient
 # ---------------------------------------------------------------------------
 async def test_register_success(client: AsyncClient):
     res = await client.post("/api/v1/auth/register", json={
-        "email": "newuser@pp.test",
+        "email": "newuser@example.com",
         "password": "Password123!",
         "full_name": "New User",
     })
     assert res.status_code == 201
     body = res.json()
-    assert body["email"] == "newuser@pp.test"
+    assert body["email"] == "newuser@example.com"
     assert body["full_name"] == "New User"
     assert "id" in body
 
 
 async def test_register_duplicate_email(client: AsyncClient):
-    payload = {"email": "dup@pp.test", "password": "Password123!", "full_name": "Dup"}
+    payload = {"email": "dup@example.com", "password": "Password123!", "full_name": "Dup"}
     await client.post("/api/v1/auth/register", json=payload)
     res = await client.post("/api/v1/auth/register", json=payload)
     assert res.status_code == 409
@@ -40,7 +40,7 @@ async def test_register_invalid_email(client: AsyncClient):
 
 async def test_register_short_password(client: AsyncClient):
     res = await client.post("/api/v1/auth/register", json={
-        "email": "short@pp.test",
+        "email": "short@example.com",
         "password": "abc",
         "full_name": "Short Password",
     })
@@ -52,10 +52,10 @@ async def test_register_short_password(client: AsyncClient):
 # ---------------------------------------------------------------------------
 async def test_login_success(client: AsyncClient):
     await client.post("/api/v1/auth/register", json={
-        "email": "loginok@pp.test", "password": "Password123!", "full_name": "Login OK",
+        "email": "loginok@example.com", "password": "Password123!", "full_name": "Login OK",
     })
     res = await client.post("/api/v1/auth/login", json={
-        "email": "loginok@pp.test", "password": "Password123!",
+        "email": "loginok@example.com", "password": "Password123!",
     })
     assert res.status_code == 200
     body = res.json()
@@ -66,10 +66,10 @@ async def test_login_success(client: AsyncClient):
 
 async def test_login_wrong_password(client: AsyncClient):
     await client.post("/api/v1/auth/register", json={
-        "email": "wrongpw@pp.test", "password": "Password123!", "full_name": "Wrong PW",
+        "email": "wrongpw@example.com", "password": "Password123!", "full_name": "Wrong PW",
     })
     res = await client.post("/api/v1/auth/login", json={
-        "email": "wrongpw@pp.test", "password": "BadPassword!",
+        "email": "wrongpw@example.com", "password": "BadPassword!",
     })
     assert res.status_code == 401
     assert res.json()["detail"]["code"] == "INVALID_CREDENTIALS"
@@ -77,7 +77,7 @@ async def test_login_wrong_password(client: AsyncClient):
 
 async def test_login_nonexistent_user(client: AsyncClient):
     res = await client.post("/api/v1/auth/login", json={
-        "email": "nobody@pp.test", "password": "Password123!",
+        "email": "nobody@example.com", "password": "Password123!",
     })
     assert res.status_code == 401
 

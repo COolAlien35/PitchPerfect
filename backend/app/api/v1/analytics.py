@@ -56,10 +56,10 @@ async def list_sessions(current_user: CurrentUser, db: DB) -> SessionListRespons
     # 1. Fetch sessions from the interview pipeline tables
     sql = text("""
         SELECT
-            s.id::TEXT                              AS id,
+            CAST(s.id AS TEXT)                      AS id,
             i.title                                 AS type,
             COALESCE(s.overall_score, 0)            AS score,
-            TO_CHAR(s.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS date,
+            COALESCE(CAST(s.created_at AS TEXT), '') AS date,
             '30 min'                                AS duration,
             CASE
                 WHEN LOWER(i.title) LIKE '%technical%' THEN 'technical'
