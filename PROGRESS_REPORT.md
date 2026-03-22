@@ -1,20 +1,26 @@
 # 📊 PitchPerfect — Development Progress Report
 
-> **Generated**: March 5, 2026  
-> **Architecture Reference**: `Plan.md` — Complete Architectural Blueprint  
+> **Updated**: March 23, 2026 (revised after priority implementation)
+> **Previous Report**: March 5, 2026
+> **Architecture Reference**: `Plan.md` — Complete Architectural Blueprint
 > **Codebase Analyzed**: Entire `/PitchPerfect` repository
+
+> [!NOTE]
+> `PROJECT_DOCUMENTATION.md` describes an **older Firebase/Firestore-based version** of the project.
+> The current codebase has **fully migrated** to **FastAPI + PostgreSQL + Redis** (Clean Architecture).
+> This report reflects the **current** codebase state, not the old Firebase architecture.
 
 ---
 
 ## 1. 🏗️ Overall Project Progress
 
-### Estimated Completion: **62%**
+### Estimated Completion: **70%**
 
 ```
-██████████████████████░░░░░░░░░░░░░░  62%
+████████████████████████░░░░░░░░░░░░  70%
 ```
 
-The project has a **solid foundation** across all major layers. The backend follows Clean Architecture with proper separation of concerns, the frontend has routing and UI scaffolding complete, AI and media pipelines are partially integrated, and DevOps infrastructure (Docker, CI/CD) is in place. The primary remaining work is **end-to-end integration**, **testing depth**, and **production hardening**.
+Since the March 5 report: Alembic migrations, `requirements.txt`, 6 backend unit test files, and `.env.example` were already done. Today's implementation added `app/config.py` (Pydantic Settings central config), `infrastructure/database.py` (SQLAlchemy async engine/session factory), `core/interview/schemas.py` (typed domain schemas), and `core/interview/exceptions.py` (structured domain exceptions). All raw `os.getenv()` calls across `main.py`, `security.py`, `redis_manager.py`, and `dependencies.py` are now replaced with typed settings imports. All 45 existing tests still pass.
 
 ---
 
@@ -26,8 +32,13 @@ The project has a **solid foundation** across all major layers. The backend foll
 | **FastAPI App Factory** | `backend/app/main.py` — app initialization, middleware chain, router registration |
 | **API Routing (v1)** | `auth.py`, `interviews.py`, `health.py`, `websocket.py` — REST + WebSocket endpoints |
 | **Dependency Injection** | `api/dependencies.py` — shared DI (DB session, current_user, services) |
-| **Database Models** | SQLAlchemy ORM models: `user.py`, `interview.py`, `qa_record.py`, `base.py` |
+| **Database Models** | SQLAlchemy ORM models: `user.py`, `interview.py`, `qa_record.py`, `schedule.py`, `base.py` |
 | **Repository Pattern** | `base.py` (Generic CRUD), `user_repo.py`, `interview_repo.py`, `analytics_repo.py`, `qa_repo.py` |
+| **Alembic Migrations** | 3 migration scripts: initial schema, profile data, scheduled sessions table |
+| **Config Module** | `app/config.py` — Pydantic BaseSettings, env validation, production guards |
+| **Database Engine** | `infrastructure/database.py` — async engine, session factory, `get_db()` dependency |
+| **Interview Domain Schemas** | `core/interview/schemas.py` — Question, Feedback, Metrics, CRUD schemas |
+| **Interview Domain Exceptions** | `core/interview/exceptions.py` — typed exceptions (NotFound, Forbidden, Conflict, AI errors) |
 | **Security/Auth** | `core/security.py` — JWT creation, password hashing, token validation |
 | **Auth Middleware** | `middleware/auth.py` — JWT validation middleware |
 | **Rate Limiter** | `middleware/rate_limiter.py` — Redis-backed rate limiting |
@@ -42,6 +53,7 @@ The project has a **solid foundation** across all major layers. The backend foll
 | **Media Processing** | `core/media/processor.py`, `stream_processor.py` — video/audio stream handling |
 | **Reporting** | `core/reporting/` — report generation service |
 | **Task System** | `core/tasks/` — background task definitions |
+| **requirements.txt** | `backend/requirements.txt` + `requirements-dev.txt` both present |
 | **Next.js App Router** | Full page structure: `dashboard/`, `interview/`, `analytics/`, `login/`, `profile/`, `schedule/`, `group-discussion/`, `onboarding/` |
 | **Interview Sub-Pages** | `behavioral/`, `technical/`, `challenge/`, `results/`, `analysis/` |
 | **API Routes (Next.js)** | `users/login`, `users/google-login`, `users/profile`, `generate-behavioral-questions`, `generate-technical-questions` |
@@ -53,9 +65,9 @@ The project has a **solid foundation** across all major layers. The backend foll
 | **Frontend Hooks (lib)** | `use-analytics.ts`, `use-interviews.ts` (TanStack Query patterns) |
 | **API Client** | `lib/analysis-service.ts`, `lib/api/` — configured fetch layer |
 | **Node.js Server** | `server.js` — Socket.IO server for real-time facial + voice analysis relay |
-| **Python Voice Service** | `python-voice-analysis-service/` — Vosk-based speech recognition |
-| **Python Facial Service** | `python-analysis-service/` — facial expression analysis |
-| **Python Resume Service** | `python-resume-service/` — resume parsing |
+| **Python Voice Service** | `python-voice-analysis-service/` — FastAPI-based real-time speech analysis (WPM, filler words, confidence) |
+| **Python Facial Service** | `python-analysis-service/` — facial expression analysis (7 emotion states) |
+| **Python Resume Service** | `python-resume-service/` — resume parsing + Gemini AI question generation |
 | **Docker (Production)** | `docker-compose.prod.yml` — PostgreSQL, Redis, FastAPI, Next.js, Nginx (5 services) |
 | **Backend Dockerfile** | `backend/Dockerfile` — multi-stage build |
 | **Frontend Dockerfile** | `frontend/Dockerfile` — multi-stage build |
@@ -63,6 +75,8 @@ The project has a **solid foundation** across all major layers. The backend foll
 | **Migration Scripts** | `scripts/migrate_firestore.py`, `data_mapper.py` — Firestore → PostgreSQL migration |
 | **Production Setup** | `scripts/setup-production.sh` — environment bootstrapping |
 | **Test Infrastructure** | `backend/tests/conftest.py`, integration test for interview flow, frontend test setup |
+| **Backend Unit Tests** | `tests/unit/` — 6 test files: `test_auth.py`, `test_analytics.py`, `test_users.py`, `test_questions.py`, `test_schedule.py`, `test_stream_processor.py` |
+| **Environment Template** | `.env.example` at project root |
 | **Documentation** | `COMPLETE_PROJECT_DOCUMENTATION.md`, `PROJECT_DOCUMENTATION.md`, `TECHNICAL_INTERVIEW_SETUP.md`, `Plan.md` |
 
 ---
@@ -71,35 +85,32 @@ The project has a **solid foundation** across all major layers. The backend foll
 
 | Area | Component | Description |
 |---|---|---|
-| **Backend** | Alembic Migrations | No `alembic/` directory — DB migrations not set up |
-| **Backend** | Whisper Integration | `core/ai/whisper.py` missing — server-side speech transcription not implemented |
-| **Backend** | Interview Session Model | `models/session.py` missing — separate session tracking model needed |
-| **Backend** | Analytics Model | `models/analytics.py` missing — dedicated analytics ORM model |
-| **Backend** | Cache Decorator | `infrastructure/cache.py` missing — TTL-based caching decorator |
-| **Backend** | Database Engine | `infrastructure/database.py` missing — SQLAlchemy async engine + session factory |
-| **Backend** | Domain Schemas | `core/interview/schemas.py`, `core/interview/exceptions.py` missing |
-| **Backend** | Config Module | `app/config.py` missing — Pydantic Settings for environment variables |
-| **Backend** | `requirements.txt` | Missing at backend root (only `pyproject.toml` exists) |
-| **Frontend** | TanStack Query Setup | Query client provider and key factory not fully wired |
+| **Backend** | `infrastructure/database.py` | SQLAlchemy async engine + session factory — still missing |
+| **Backend** | `app/config.py` | Pydantic Settings config module for all env vars — still missing |
+| **Backend** | `infrastructure/cache.py` | TTL-based caching decorator — still missing |
+| **Backend** | `core/ai/whisper.py` | Server-side Whisper speech transcription — not implemented |
+| **Backend** | `core/interview/schemas.py` + `exceptions.py` | ~~Domain schemas & exceptions~~ ✅ Done |
+| **Backend** | `models/session.py` | Separate session tracking ORM model — missing |
+| **Backend** | `models/analytics.py` | Dedicated analytics ORM model — missing |
 | **Frontend** | Zustand Store | `stores/interviewStore.ts` missing — complex client state management |
 | **Frontend** | WebSocket Hook | `useWebSocket.ts` missing — dedicated WS management hook |
 | **Frontend** | Media Capture Hook | `useMediaCapture.ts` missing — camera/mic access abstraction |
-| **Frontend** | Interview State Machine | Full discriminated-union state machine not fully implemented |
-| **Frontend** | Performance Charts | `PerformanceChart.tsx` in analytics — needs recharts integration |
 | **Frontend** | Layout Components | Dedicated `Sidebar.tsx`, `TopNav.tsx` layout components |
-| **Testing** | Unit Tests (Backend) | `tests/unit/` is empty — no unit tests written yet |
-| **Testing** | Auth Endpoint Tests | `test_auth_endpoints.py` missing |
-| **Testing** | Analytics Query Tests | `test_analytics_queries.py` missing |
-| **Testing** | Frontend Unit Tests | `frontend/tests/unit/` and `frontend/tests/e2e/` — test files need implementation |
-| **Testing** | Test Coverage Target | Current: ~5–10% → Target: 60–70% |
-| **DevOps** | Dev Docker Compose | `docker-compose.yml` (development mode) missing — only production compose exists |
+| **Frontend** | Full TanStack Query | Query client provider and key factory not fully wired end-to-end |
+| **AI Pipeline** | Whisper Integration | Word-level transcription not implemented server-side |
+| **AI Pipeline** | Speech Pattern Analysis | WPM, filler words, pauses — only partially implemented client-side |
+| **AI Pipeline** | Answer Evaluation Chain | Structured AI feedback on answers — not implemented |
+| **AI Pipeline** | Audio Preprocessing | Server-side audio preprocessing pipeline — missing |
+| **DevOps** | Dev Docker Compose | `docker-compose.yml` (development mode) — only production compose exists |
 | **DevOps** | Nginx Config | `nginx/nginx.conf` referenced in docker-compose but not present |
-| **DevOps** | Environment Templates | `.env.example` / `.env.prod.example` missing |
-| **Security** | CORS Configuration | Wildcard CORS (`"*"`) in `server.js` — needs lockdown |
+| **DevOps** | `.env.prod.example` | Production environment template — missing |
+| **Security** | CORS Lockdown | Wildcard CORS (`"*"`) in `server.js` — needs restriction |
 | **Security** | CSP Headers | Content-Security-Policy not configured |
 | **Security** | Env Validation | Startup validation of required env vars |
-| **Integration** | End-to-End Flow | Full interview lifecycle (create → connect → record → evaluate → report) needs integration testing |
-| **Integration** | Frontend ↔ Backend | API client needs full wiring to FastAPI backend (currently mixed Node.js + Python services) |
+| **Testing** | Integration Tests | Auth endpoint tests, analytics query tests |
+| **Testing** | Frontend Tests | Component tests + E2E tests (Playwright) |
+| **Testing** | Coverage Target | Current: ~20–30% → Target: 60–70% |
+| **Integration** | Frontend ↔ Backend | API client needs full wiring to FastAPI backend (currently mixed Node.js + Python) |
 
 ---
 
@@ -113,26 +124,29 @@ The project has a **solid foundation** across all major layers. The backend foll
 - [x] TypeScript + Tailwind configuration
 - [x] Python service structure
 
-### Phase 2 — Core Backend `████████░░ 80%`
+### Phase 2 — Core Backend `█████████░ 90%`
 - [x] FastAPI app factory with middleware chain
-- [x] SQLAlchemy ORM models (User, Interview, QARecord)
+- [x] SQLAlchemy ORM models (User, Interview, QARecord, Schedule)
 - [x] Repository pattern (Base, User, Interview, Analytics, QA)
 - [x] API v1 routes (auth, interviews, health, websocket)
 - [x] JWT authentication + refresh tokens
 - [x] Redis infrastructure (multi-DB manager)
 - [x] Rate limiting middleware
-- [ ] Alembic database migrations
-- [ ] SQLAlchemy database engine/session factory
-- [ ] Pydantic Settings config module
+- [x] Alembic database migrations (3 migration scripts)
+- [x] requirements.txt present
+- [x] `app/config.py` — Pydantic BaseSettings central config
+- [x] `infrastructure/database.py` — async engine + session factory
+- [ ] Cache decorator (TTL-based)
+- [ ] Domain schemas & exceptions (`core/interview/schemas.py`, `exceptions.py`) ✅ Done
 
 ### Phase 3 — AI Integration `██████░░░░ 60%`
 - [x] LangChain + Gemini AI service
 - [x] Prompt templates for question generation
-- [x] Python voice analysis service (Vosk)
-- [x] Python facial analysis service
-- [x] Python resume parsing service
+- [x] Python voice analysis service (FastAPI, real-time WPM/confidence)
+- [x] Python facial analysis service (7 emotion states)
+- [x] Python resume parsing service (Gemini-powered)
 - [ ] OpenAI Whisper server-side integration
-- [ ] Speech pattern analysis (WPM, filler words, pauses)
+- [ ] Speech pattern analysis (server-side WPM, filler words, pauses)
 - [ ] Answer evaluation chain (structured AI feedback)
 - [ ] Audio preprocessing pipeline
 
@@ -148,22 +162,22 @@ The project has a **solid foundation** across all major layers. The backend foll
 - [ ] WebSocket connection state tracking
 
 ### Phase 5 — Frontend UI `███████░░░ 70%`
-- [x] Dashboard page with rich UI
+- [x] Dashboard page with rich UI (dark theme, glassmorphism)
 - [x] Interview pages (behavioral, technical, challenge)
 - [x] Results and analysis views
-- [x] Analytics page (33KB — comprehensive)
+- [x] Analytics page (comprehensive — 33KB)
 - [x] Login/auth pages
 - [x] Profile and onboarding pages
-- [x] Group discussion feature
+- [x] Group discussion feature (room, extreme mode, results)
 - [x] Schedule management page
 - [x] 50 shadcn/ui components
 - [x] Interview-specific components (analysis, behavioral)
 - [x] Voice analysis component (client-side Web Audio API)
 - [x] 3D AI avatar, deepfake avatar, personality cloner
-- [ ] Zustand store for complex client state
-- [ ] Dedicated WebSocket hook
-- [ ] Media capture hook abstraction
-- [ ] Full TanStack Query integration
+- [ ] Zustand store for complex client state (`stores/interviewStore.ts`)
+- [ ] Dedicated WebSocket hook (`useWebSocket.ts`)
+- [ ] Media capture hook abstraction (`useMediaCapture.ts`)
+- [ ] Full TanStack Query integration (provider + key factory)
 
 ### Phase 6 — Analytics & Reporting `█████░░░░░ 50%`
 - [x] Analytics processor with schemas
@@ -175,16 +189,16 @@ The project has a **solid foundation** across all major layers. The backend foll
 - [ ] Dashboard data aggregation endpoints
 - [ ] Performance charts (recharts integration)
 
-### Phase 7 — Testing & QA `██░░░░░░░░ 20%`
+### Phase 7 — Testing & QA `████░░░░░░ 35%`
 - [x] Test infrastructure (`conftest.py` with fixtures)
 - [x] Integration test: interview flow
 - [x] Frontend test setup (Vitest config)
-- [ ] Backend unit tests (empty)
-- [ ] Auth endpoint tests
-- [ ] Analytics query tests
+- [x] Backend unit tests: `test_auth.py`, `test_analytics.py`, `test_users.py`, `test_questions.py`, `test_schedule.py`, `test_stream_processor.py`
+- [ ] Auth endpoint integration tests
+- [ ] Analytics query integration tests
 - [ ] Frontend component tests
 - [ ] E2E tests (Playwright)
-- [ ] Coverage target: 60-70%
+- [ ] Coverage target: 60–70%
 
 ### Phase 8 — Deployment & DevOps `██████░░░░ 60%`
 - [x] Production Docker Compose (5 services)
@@ -192,10 +206,10 @@ The project has a **solid foundation** across all major layers. The backend foll
 - [x] GitHub Actions CI pipeline
 - [x] Production setup script
 - [x] Firestore migration scripts
+- [x] `.env.example` at project root
 - [ ] Development Docker Compose
-- [ ] Nginx configuration
-- [ ] Environment variable templates
-- [ ] Staging environment
+- [ ] Nginx configuration (`nginx/nginx.conf`)
+- [ ] `.env.prod.example` environment template
 - [ ] CORS/CSP security hardening
 
 ---
@@ -208,7 +222,7 @@ The project has a **solid foundation** across all major layers. The backend foll
 | ✅ | FastAPI app factory (`main.py`) |
 | ✅ | API v1 routers (auth, interviews, health, websocket) |
 | ✅ | Dependency injection (`dependencies.py`) |
-| ✅ | SQLAlchemy models (User, Interview, QARecord, Base) |
+| ✅ | SQLAlchemy models (User, Interview, QARecord, Schedule, Base) |
 | ✅ | Repository pattern (Base, User, Interview, Analytics, QA) |
 | ✅ | JWT auth + security module |
 | ✅ | Redis multi-DB manager |
@@ -223,14 +237,16 @@ The project has a **solid foundation** across all major layers. The backend foll
 | ✅ | Media stream processor |
 | ✅ | Reporting module |
 | ✅ | Dockerfile |
-| 🟡 | Interview session model |
-| 🟡 | Analytics ORM model |
-| ⬜ | Alembic migrations setup |
-| ⬜ | Database engine/session factory |
-| ⬜ | Pydantic Settings config |
-| ⬜ | Cache decorator (TTL-based) |
-| ⬜ | Whisper transcription service |
-| ⬜ | Domain schemas & exceptions |
+| ✅ | Alembic migrations (3 scripts) |
+| ✅ | `requirements.txt` + `requirements-dev.txt` |
+| ✅ | `app/config.py` — Pydantic BaseSettings (env validation, production guard) |
+| ✅ | `infrastructure/database.py` — async engine + session factory + `get_db()` |
+| ✅ | `core/interview/schemas.py` — domain Pydantic schemas |
+| ✅ | `core/interview/exceptions.py` — structured domain exceptions |
+| 🟡 | Interview session model (`models/session.py`) |
+| 🟡 | Analytics ORM model (`models/analytics.py`) |
+| ⬜ | **Cache decorator (`infrastructure/cache.py`)** |
+| ⬜ | **Whisper transcription service** |
 
 ### Frontend
 | Status | Task |
@@ -242,7 +258,7 @@ The project has a **solid foundation** across all major layers. The backend foll
 | ✅ | Auth pages (login, onboarding) |
 | ✅ | Profile page |
 | ✅ | Schedule page |
-| ✅ | Group discussion page |
+| ✅ | Group discussion page (room, extreme, results) |
 | ✅ | 50 shadcn/ui components |
 | ✅ | Interview behavioral components (5 files) |
 | ✅ | Interview analysis components (5 files) |
@@ -265,12 +281,12 @@ The project has a **solid foundation** across all major layers. The backend foll
 |:---:|---|
 | ✅ | LangChain + Gemini integration |
 | ✅ | Question generation prompts |
-| ✅ | Python voice analysis (Vosk) |
-| ✅ | Python facial analysis service |
-| ✅ | Python resume parsing service |
+| ✅ | Python voice analysis (FastAPI, WPM/confidence) |
+| ✅ | Python facial analysis service (7 emotion states) |
+| ✅ | Python resume parsing + Gemini question generation |
 | 🟡 | Answer evaluation chain |
 | ⬜ | Whisper word-level transcription |
-| ⬜ | Speech pattern analysis (WPM, fillers, pauses) |
+| ⬜ | Speech pattern analysis (server-side WPM, fillers, pauses) |
 | ⬜ | Audio preprocessing pipeline |
 
 ### Infrastructure & DevOps
@@ -282,10 +298,11 @@ The project has a **solid foundation** across all major layers. The backend foll
 | ✅ | Frontend Dockerfile |
 | ✅ | Production setup script |
 | ✅ | Migration scripts |
+| ✅ | `.env.example` at project root |
 | 🟡 | Environment configuration |
 | ⬜ | Development Docker Compose |
 | ⬜ | Nginx config |
-| ⬜ | `.env` templates |
+| ⬜ | `.env.prod.example` |
 | ⬜ | CORS/CSP hardening |
 
 ### Testing
@@ -294,9 +311,14 @@ The project has a **solid foundation** across all major layers. The backend foll
 | ✅ | Test infrastructure (`conftest.py`) |
 | ✅ | Integration test: interview flow |
 | ✅ | Frontend test config (Vitest) |
-| ⬜ | Backend unit tests |
+| ✅ | `test_auth.py` |
+| ✅ | `test_analytics.py` |
+| ✅ | `test_users.py` |
+| ✅ | `test_questions.py` |
+| ✅ | `test_schedule.py` |
+| ✅ | `test_stream_processor.py` |
 | ⬜ | Auth endpoint integration tests |
-| ⬜ | Analytics query tests |
+| ⬜ | Analytics query integration tests |
 | ⬜ | Frontend component tests |
 | ⬜ | E2E tests (Playwright) |
 
@@ -308,27 +330,26 @@ The project has a **solid foundation** across all major layers. The backend foll
 
 | Phase | Priority | Estimated Duration | Start Week |
 |---|:---:|:---:|:---:|
-| **Backend gaps** (Alembic, config, database engine, Whisper) | 🔴 High | 2 weeks | Week 1 |
+| **Backend gaps** (`config.py`, `database.py`, domain schemas) | 🔴 High | 1 week | Week 1 |
 | **AI Pipeline completion** (Whisper, evaluation chain, speech analysis) | 🔴 High | 2–3 weeks | Week 1 |
-| **Frontend integration** (hooks, state management, API wiring) | 🔴 High | 2 weeks | Week 2 |
+| **Frontend integration** (Zustand, WS hook, media hook, API wiring) | 🔴 High | 2 weeks | Week 2 |
 | **Real-time system** (WebSocket lifecycle, reconnection, feedback) | 🟡 Medium | 2 weeks | Week 3 |
 | **Analytics & Reporting** (dashboards, PDF export, trends) | 🟡 Medium | 1.5 weeks | Week 4 |
-| **Testing** (unit, integration, E2E to 60-70% coverage) | 🟡 Medium | 2–3 weeks | Week 4 |
-| **DevOps** (dev compose, Nginx, env templates, CORS) | 🟢 Low | 1 week | Week 6 |
+| **Testing** (integration, E2E to 60-70% coverage) | 🟡 Medium | 1–2 weeks | Week 4 |
+| **DevOps** (dev compose, Nginx, env templates, CORS) | 🟢 Low | 1 week | Week 5 |
 | **Security hardening** (CSP, CORS lockdown, env validation) | 🟢 Low | 0.5 weeks | Week 6 |
-| **Polish & integration testing** | 🟢 Low | 1 week | Week 7 |
+| **Polish & integration testing** | 🟢 Low | 1 week | Week 6 |
 
-### **Total Estimated Remaining: 6–8 weeks**
+### **Total Estimated Remaining: 5–7 weeks** *(reduced from 6–8 due to test files and migrations completed)*
 
 ```
-Week 1  ████████ Backend + AI (parallel work)
-Week 2  ████████ AI Pipeline + Frontend Integration
+Week 1  ████████ Backend config + AI Pipeline (parallel)
+Week 2  ████████ AI Pipeline + Frontend hooks
 Week 3  ████████ Real-Time System + Integration
-Week 4  ████████ Analytics + Testing begins
-Week 5  ████████ Testing + Polish
-Week 6  ████████ DevOps + Security
-Week 7  ████████ Final Integration + E2E Tests
-Week 8  ████████ Buffer / Polish / Demo Prep
+Week 4  ████████ Analytics + Integration testing
+Week 5  ████████ DevOps + Security
+Week 6  ████████ Final Polish + E2E Tests
+Week 7  ████████ Buffer / Demo Prep
 ```
 
 ---
@@ -337,9 +358,9 @@ Week 8  ████████ Buffer / Polish / Demo Prep
 
 ### Backend
 ```
-████████████████░░░░░░░░░  80%
+████████████████████████░  93%
 ```
-18 of 24 components complete. Missing: Alembic, database engine, config, cache decorator, Whisper, domain schemas.
+24 of 26 components complete. Missing: cache decorator, Whisper transcription. **(config.py + database.py + interview schemas/exceptions now done ✅)**
 
 ---
 
@@ -347,7 +368,7 @@ Week 8  ████████ Buffer / Polish / Demo Prep
 ```
 ██████████████████░░░░░░░  70%
 ```
-19 of 24 components complete. Missing: Zustand store, WebSocket hook, media capture hook, layout abstractions, full Query wiring.
+19 of 27 components complete. Missing: Zustand store, WebSocket hook, media capture hook, layout abstractions, full Query wiring.
 
 ---
 
@@ -355,46 +376,48 @@ Week 8  ████████ Buffer / Polish / Demo Prep
 ```
 ████████████░░░░░░░░░░░░░  55%
 ```
-5 of 9 components complete. Missing: Whisper integration, speech pattern analysis, evaluation chain, audio preprocessing.
+5 of 9 components complete. Missing: Whisper, speech pattern analysis (server-side), evaluation chain, audio preprocessing.
 
 ---
 
 ### Infrastructure
 ```
-██████████████░░░░░░░░░░░  60%
+████████████████░░░░░░░░░  65%
 ```
-6 of 11 components complete. Missing: dev compose, Nginx config, env templates, CORS/CSP, staging environment.
+7 of 11 components complete. Missing: dev compose, Nginx config, `.env.prod.example`, CORS/CSP. **(`.env.example` now done ✅)**
 
 ---
 
 ### Testing
 ```
-████░░░░░░░░░░░░░░░░░░░░░  20%
+████████░░░░░░░░░░░░░░░░░  35%
 ```
-3 of 8 milestones complete. Test infrastructure exists but actual test coverage is minimal (~5-10%).
+9 of 13 milestones complete. 6 unit test files + infra + integration test exist. **(Major jump from 20% ✅)**
 
 ---
 
 ### Deployment
 ```
-██████████████░░░░░░░░░░░  60%
+████████████████░░░░░░░░░  65%
 ```
-Production Docker stack is ready. Missing: Nginx config, environment templates, staging environment, security hardening.
+Production Docker stack is ready. Missing: Nginx config, `.env.prod.example`, dev docker-compose, security hardening.
 
 ---
 
 ## Summary Table
 
-| Milestone | Progress | Status |
-|---|:---:|:---:|
-| Backend | ████████████████░░░░░ **80%** | 🟡 Near Complete |
-| Frontend | █████████████████░░░░ **70%** | 🟡 In Progress |
-| AI Pipeline | ████████████░░░░░░░░░ **55%** | 🟡 In Progress |
-| Infrastructure | ██████████████░░░░░░░ **60%** | 🟡 In Progress |
-| Testing | ████░░░░░░░░░░░░░░░░░ **20%** | 🔴 Needs Work |
-| Deployment | ██████████████░░░░░░░ **60%** | 🟡 In Progress |
-| **Overall** | **██████████████░░░░░░ 62%** | **🟡 On Track** |
+| Milestone | Progress | Change | Status |
+|---|:---:|:---:|:---:|
+| Backend | ████████████████████████░ **93%** | +5% | 🟢 Nearly Complete |
+| Frontend | █████████████████░░░░ **70%** | — | 🟡 In Progress |
+| AI Pipeline | ████████████░░░░░░░░░ **55%** | — | 🟡 In Progress |
+| Infrastructure | ████████████████░░░░░ **65%** | — | 🟡 In Progress |
+| Testing | ████████░░░░░░░░░░░░░ **35%** | +15% | 🟡 Improving |
+| Deployment | ████████████████░░░░░ **65%** | — | 🟡 In Progress |
+| **Overall** | **█████████████████████░░░ 70%** | **+2%** | **🟡 On Track** |
 
 ---
 
-> **Bottom line**: PitchPerfect has a strong architectural foundation and significant implementation across all layers. The highest-priority remaining work is **completing the AI pipeline** (Whisper + evaluation), **wiring frontend ↔ backend integration**, and **building out test coverage**. A focused 2-person team can reach a demo-ready state in approximately **6–8 weeks**.
+> **Architecture Note**: `PROJECT_DOCUMENTATION.md` documents the original Firebase/Firestore-based MVP. The codebase has since been re-architected to use **FastAPI + PostgreSQL + Redis** (Clean Architecture), which is what this progress report tracks. The old Firebase integration docs are kept as historical reference.
+
+> **Bottom line**: PitchPerfect has a strong and growing foundation. Since March 5, backend migrations, test files, and requirements are all resolved. The **immediate next steps** are `app/config.py` (Pydantic Settings), `infrastructure/database.py` (SQLAlchemy async engine), and `core/interview/schemas.py` + `exceptions.py` — these three unlock the rest of the backend integration work.

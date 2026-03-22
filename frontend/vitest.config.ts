@@ -8,16 +8,19 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./tests/setup.ts'],
-        // Fail-fast: stop on first failure
-        bail: 1,
+        // Exclude Playwright e2e specs — those run via `npx playwright test`
+        exclude: ['tests/e2e/**', '**/node_modules/**'],
         coverage: {
             provider: 'v8',
             reporter: ['text', 'lcov'],
-            include: ['hooks/**', 'lib/**'],
+            include: ['hooks/**', 'lib/**', '../hooks/**', '../stores/**'],
             thresholds: { lines: 70, functions: 70, branches: 60 },
         },
     },
     resolve: {
-        alias: { '@': path.resolve(__dirname, './') },
+        alias: {
+            '@': path.resolve(__dirname, './'),
+            '@root': path.resolve(__dirname, '../'),
+        },
     },
 });

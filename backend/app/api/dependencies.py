@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncGenerator
 from typing import Annotated
 from uuid import UUID
@@ -14,44 +13,16 @@ from jwt.exceptions import (
     InvalidIssuerError,
     InvalidTokenError,
 )
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.security import TokenPayload, decode_token, is_blacklisted
+from ..infrastructure.database import get_db
 from ..models.user import User
 from ..repositories.user_repo import UserRepository
 
 # ---------------------------------------------------------------------------
-# Async DB session dependency
+# Async DB session dependency — engine lives in infrastructure/database.py
 # ---------------------------------------------------------------------------
-_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/pitchperfect",
-)
-
-_engine = create_async_engine(
-    _DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    echo=False,
-)
-
-_async_session = async_sessionmaker(
-    bind=_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with _async_session() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
 DB = Annotated[AsyncSession, Depends(get_db)]
 
 # ---------------------------------------------------------------------------

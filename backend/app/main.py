@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -25,19 +24,20 @@ from .api.v1.questions import router as questions_router
 from .api.v1.users import router as users_router
 from .api.v1.analytics import router as analytics_router
 from .api.v1.schedule import router as schedule_router
+from .config import settings
 from .infrastructure.redis_manager import redis_manager
 from .infrastructure.logging import configure_logging, RequestIDMiddleware
 from .middleware.monitoring import PrometheusMiddleware
 from .middleware.rate_limiter import RateTier, rate_limit
 
 # ---------------------------------------------------------------------------
-# Config
+# Config — sourced from centralised settings
 # ---------------------------------------------------------------------------
-LOG_LEVEL          = os.getenv("LOG_LEVEL", "INFO")
-METRICS_SECRET     = os.getenv("METRICS_SECRET", "")          # empty = no auth (dev only)
-ALLOWED_ORIGINS    = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-ALLOWED_METHODS    = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-ALLOWED_HEADERS    = ["Authorization", "Content-Type", "X-Request-ID"]
+LOG_LEVEL       = settings.LOG_LEVEL
+METRICS_SECRET  = settings.METRICS_SECRET
+ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
+ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+ALLOWED_HEADERS = ["Authorization", "Content-Type", "X-Request-ID"]
 
 # ---------------------------------------------------------------------------
 # Lifespan
@@ -45,10 +45,16 @@ ALLOWED_HEADERS    = ["Authorization", "Content-Type", "X-Request-ID"]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(LOG_LEVEL)
-    logging.getLogger("pitchperfect.app").info("Starting PitchPerfect API …")
+    _log = logging.getLogger("pitchperfect.app")
+    _log.info(
+        "Starting PitchPerfect API — env=%s db=%s redis=%s",
+        settings.APP_ENV,
+        settings.DATABASE_URL.split("@")[-1] if "@" in settings.DATABASE_URL else settings.DATABASE_URL,
+        settings.REDIS_URL,
+    )
     await redis_manager.connect()
     yield
-    logging.getLogger("pitchperfect.app").info("Shutting down …")
+    _log.info("Shutting down …")
     await redis_manager.disconnect()
 
 

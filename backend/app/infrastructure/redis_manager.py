@@ -130,4 +130,11 @@ class RedisManager:
 # ------------------------------------------------------------------
 # Application-scoped singleton
 # ------------------------------------------------------------------
-redis_manager = RedisManager()
+def _make_redis_manager() -> "RedisManager":
+    # Lazy import to avoid circular dependency:
+    # redis_manager ← security ← config ← redis_manager
+    from ..config import settings  # noqa: PLC0415
+    return RedisManager(redis_url=settings.REDIS_URL)
+
+
+redis_manager: RedisManager = _make_redis_manager()

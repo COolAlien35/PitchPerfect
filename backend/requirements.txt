@@ -16,6 +16,7 @@ redis>=5.0.0
 PyJWT>=2.8.0
 bcrypt>=4.1.0
 pydantic[email]>=2.7.0
+pydantic-settings>=2.3.0
 
 # Monitoring
 prometheus-client>=0.20.0

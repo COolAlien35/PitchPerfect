@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -16,18 +15,19 @@ from jwt.exceptions import (
 
 from pydantic import BaseModel, Field
 
+from ..config import settings
 from ..infrastructure.redis_manager import redis_manager
 
 # ---------------------------------------------------------------------------
-# Config – all secrets read from environment at import time
+# Config — loaded from central settings
 # ---------------------------------------------------------------------------
-SECRET_KEY: str         = os.getenv("SECRET_KEY", "CHANGE_ME_BEFORE_PRODUCTION")
-ALGORITHM: str          = "HS256"
-TOKEN_ISSUER: str       = os.getenv("TOKEN_ISSUER", "pitchperfect-api")
-TOKEN_AUDIENCE: str     = os.getenv("TOKEN_AUDIENCE", "pitchperfect-client")
-ACCESS_TOKEN_TTL        = timedelta(minutes=int(os.getenv("ACCESS_TOKEN_TTL_MIN", "30")))
-REFRESH_TOKEN_TTL       = timedelta(days=int(os.getenv("REFRESH_TOKEN_TTL_DAYS", "7")))
-BLACKLIST_PREFIX: str   = "pitchperfect:blacklist:"
+SECRET_KEY: str       = settings.SECRET_KEY
+ALGORITHM: str        = "HS256"
+TOKEN_ISSUER: str     = settings.TOKEN_ISSUER
+TOKEN_AUDIENCE: str   = settings.TOKEN_AUDIENCE
+ACCESS_TOKEN_TTL      = timedelta(minutes=settings.ACCESS_TOKEN_TTL_MIN)
+REFRESH_TOKEN_TTL     = timedelta(days=settings.REFRESH_TOKEN_TTL_DAYS)
+BLACKLIST_PREFIX: str = "pitchperfect:blacklist:"
 
 # ---------------------------------------------------------------------------
 # Pydantic v2 schemas
